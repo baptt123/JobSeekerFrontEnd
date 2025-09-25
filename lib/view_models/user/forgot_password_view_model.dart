@@ -1,5 +1,8 @@
-// view_models/forgot_password_view_model.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../../utils/token_storage.dart';
 
 class ForgotPasswordViewModel extends ChangeNotifier {
   String email = '';
@@ -10,13 +13,44 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resetPassword() async {
+  Future<void> resetPassword(BuildContext context) async {
     loading = true;
     notifyListeners();
-    // Giả lập delay
-    await Future.delayed(const Duration(seconds: 2));
-    loading = false;
-    notifyListeners();
-    // Xử lý reset password thực tế tại đây
+
+    final url = Uri.parse("http://localhost:3000/auth/forgot-password");
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email}),
+      );
+
+      loading = false;
+      notifyListeners();
+
+      if (response.statusCode == 200) {
+        // xoá token local (nếu có)
+        await TokenStorage.clearTokens();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Mật khẩu mới đã được gửi qua email")),
+        );
+
+        // chuyển về màn login
+        Navigator.of(context).pushReplacementNamed('/login');
+      } else {
+        final err = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err['message'] ?? 'Lỗi reset mật khẩu')),
+        );
+      }
+    } catch (e) {
+      loading = false;
+      notifyListeners();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi kết nối: $e")),
+      );
+    }
   }
 }

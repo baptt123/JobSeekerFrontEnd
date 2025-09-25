@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../utils/token_storage.dart';
 
 class LoginViewModel extends ChangeNotifier {
   String _email = '';
@@ -33,16 +35,40 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login() async {
+  Future<void> login(BuildContext context) async {
     _isLoading = true;
     notifyListeners();
-    // TODO: Call service to login
-    await Future.delayed(const Duration(seconds: 2));
-    _isLoading = false;
-    notifyListeners();
+    try {
+      final res = await AuthService.login(_email, _password);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Welcome back, ${res['user']['fullName']}!")),
+      );
+      // TODO: navigate to home screen
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
+  // Future<void> checkSession(BuildContext context) async {
+  //   try {
+  //     await AuthService.getProfile();
+  //   } catch (e) {
+  //     await TokenStorage.clearTokens();
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text(e.toString())),
+  //     );
+  //     // TODO: redirect to login
+  //   }
+  // }
+
   Future<void> signInWithGoogle() async {
-    // TODO: Implement google login
+    // TODO: Google sign-in
   }
+
+
 }

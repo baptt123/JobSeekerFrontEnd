@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:job_seeker_frontend/view_models/user/add_education_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/add_experience_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/add_skill_view_model.dart';
@@ -22,7 +23,9 @@ import 'package:provider/provider.dart';
 import 'myapp.dart';
 import 'view_models/user/login_view_model.dart';
 
-void main() {
+Future<void> main() async {
+  // Load file .env trước khi runApp
+  await dotenv.load(fileName: ".env");
   runApp(
     MultiProvider(
       providers: [

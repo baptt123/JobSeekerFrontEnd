@@ -84,7 +84,12 @@ class SignupScreen extends StatelessWidget {
 
               // Sign up button
               SignUpButton(
-                onPressed: () => vm.signUp(context),
+                onPressed: () async {
+                  final user = await vm.signUp(context);
+                  if (user != null) {
+                    // TODO: điều hướng sang màn hình khác (Home / Login)
+                  }
+                },
               ),
               const SizedBox(height: 16),
 

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../view_models/user/update_password_view_model.dart';
 import '../../../widgets/login/logout_and_no_result/primary_button.dart';
 
-
 class UpdatePasswordScreen extends StatelessWidget {
   const UpdatePasswordScreen({super.key});
 
@@ -25,8 +24,12 @@ class UpdatePasswordScreen extends StatelessWidget {
         child: Column(
           children: [
             const Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Update Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20))),
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Update Password',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+            ),
             const SizedBox(height: 26),
             _PasswordField(
               controller: oldCtrl,
@@ -52,7 +55,12 @@ class UpdatePasswordScreen extends StatelessWidget {
             PrimaryButton(
               text: 'UPDATE',
               onPressed: () {
-                vm.updatePassword(oldCtrl.text, newCtrl.text, confirmCtrl.text);
+                vm.updatePassword(
+                  context,
+                  oldCtrl.text,
+                  newCtrl.text,
+                  confirmCtrl.text,
+                );
               },
             ),
             const SizedBox(height: 36),

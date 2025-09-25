@@ -13,9 +13,17 @@ class ForgotPasswordForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 80),
-          Text('Forgot Password?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Forgot Password?',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 10),
-          Text('To reset your password, you need your email or mobile number that can be authenticated', style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'To reset your password, you need your email or mobile number that can be authenticated',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 32),
           TextField(
             onChanged: vm.setEmail,
@@ -25,12 +33,14 @@ class ForgotPasswordForm extends StatelessWidget {
           vm.loading
               ? const Center(child: CircularProgressIndicator())
               : SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: vm.email.isEmpty ? null : vm.resetPassword,
-              child: const Text('RESET PASSWORD'),
-            ),
-          ),
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: vm.email.isEmpty
+                        ? null
+                        : () => vm.resetPassword(context),
+                    child: const Text('RESET PASSWORD'),
+                  ),
+                ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('BACK TO LOGIN'),

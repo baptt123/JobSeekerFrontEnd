@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../view_models/user/logout_view_model.dart';
 import '../../../widgets/login/logout_and_no_result/primary_button.dart';
 
-
 class LogoutDialog extends StatelessWidget {
   const LogoutDialog({super.key});
+
   @override
   Widget build(BuildContext context) {
     var logoutVM = Provider.of<LogoutViewModel>(context);
@@ -17,15 +17,27 @@ class LogoutDialog extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 32),
           padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Log out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              const Text(
+                'Log out',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
               const SizedBox(height: 6),
-              const Text('Are you sure you want to leave?', style: TextStyle(fontSize: 16)),
+              const Text(
+                'Are you sure you want to leave?',
+                style: TextStyle(fontSize: 16),
+              ),
               const SizedBox(height: 24),
-              PrimaryButton(text: 'YES', onPressed: logoutVM.logout),
+              PrimaryButton(
+                text: 'YES',
+                onPressed: () => logoutVM.logout(context),
+              ),
               const SizedBox(height: 8),
               PrimaryButton(
                 text: 'CANCEL',

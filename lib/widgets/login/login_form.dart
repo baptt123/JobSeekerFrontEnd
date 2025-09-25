@@ -83,7 +83,7 @@ class LoginForm extends StatelessWidget {
         SizedBox(
           height: 50,
           child: ElevatedButton(
-            onPressed: vm.isLoading ? null : () => vm.login(),
+            onPressed: vm.isLoading ? null : () => vm.login(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1A1445),
               shape: RoundedRectangleBorder(
