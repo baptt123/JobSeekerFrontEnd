@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../dto/change_password_dto.dart';
+import '../../services/auth_service.dart';
 import '../../utils/token_storage.dart';
 
 class UpdatePasswordViewModel extends ChangeNotifier {
@@ -25,49 +27,23 @@ class UpdatePasswordViewModel extends ChangeNotifier {
 
   Future<void> updatePassword(
       BuildContext context, String oldPass, String newPass, String confirmPass) async {
-    final token = await TokenStorage.getAccessToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bạn chưa đăng nhập")),
-      );
-      return;
-    }
-
-    final url = Uri.parse("http://localhost:3000/auth/update-password");
+    final dto = ChangePasswordDTO(
+      oldPassword: oldPass,
+      newPassword: newPass,
+      confirmPassword: confirmPass,
+    );
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: jsonEncode({
-          "oldPassword": oldPass,
-          "newPassword": newPass,
-          "confirmPassword": confirmPass,
-        }),
+      await AuthService().updatePassword(dto);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Đổi mật khẩu thành công, vui lòng đăng nhập lại")),
       );
 
-      if (response.statusCode == 200) {
-        // xoá token local
-        await TokenStorage.clearTokens();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Đổi mật khẩu thành công, vui lòng đăng nhập lại")),
-        );
-
-        // chuyển về màn login
-        Navigator.of(context).pushReplacementNamed('/login');
-      } else {
-        final err = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err['message'] ?? 'Đổi mật khẩu thất bại')),
-        );
-      }
+      Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi kết nối: $e")),
+        SnackBar(content: Text(e.toString())),
       );
     }
   }

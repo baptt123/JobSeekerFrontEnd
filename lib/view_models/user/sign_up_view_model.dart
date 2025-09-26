@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:job_seeker_frontend/dto/register_dto.dart';
+import 'package:job_seeker_frontend/services/auth_service.dart';
 import '../../models/user-entity.dart';
 
 
@@ -39,7 +40,6 @@ class SignupViewModel extends ChangeNotifier {
   }
 
   Future<UserEntity?> signUp(BuildContext context) async {
-    final url = Uri.parse('${dotenv.env['API_URL']}/auth/register');
     final dto = RegisterDto(
       fullName: fullName,
       email: email,
@@ -47,31 +47,16 @@ class SignupViewModel extends ChangeNotifier {
     );
 
     try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(dto.toJson()),
+      final user = await AuthService().register(dto);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sign up thành công!")),
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final user = UserEntity.fromJson(data['user']);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Sign up thành công!")),
-        );
-
-        return user;
-      } else {
-        final err = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err['message'] ?? 'Đăng ký thất bại')),
-        );
-        return null;
-      }
+      return user;
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi kết nối: $e")),
+        SnackBar(content: Text(e.toString())),
       );
       return null;
     }
