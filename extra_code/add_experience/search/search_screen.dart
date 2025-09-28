@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/search_view_model.dart';
-import '../../../widgets/login/search/filter_bar.dart';
-import '../../../widgets/login/search/job_card.dart';
-import '../../../widgets/login/search/search_header.dart';
+import '../../../../../view_models/user/extra_view/search_view_model.dart';
+import '../../../../../widgets/login/extra_widget/chat/search/filter_bar.dart';
+import '../../../../../widgets/login/extra_widget/chat/search/job_card.dart';
+import '../../../../../widgets/login/search/search_header.dart';
 
 
 class SearchScreen extends StatelessWidget {

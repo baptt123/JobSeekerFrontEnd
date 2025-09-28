@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/add_skill_view_model.dart';
+import '../../../../../view_models/user/extra_view/add_skill_view_model.dart';
 import 'skill_item.dart';
 
 class AddSkillScreen extends StatelessWidget {

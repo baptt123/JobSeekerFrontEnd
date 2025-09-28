@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/notification_view_model.dart';
-import '../../../widgets/login/notification/notification_tile.dart';
+import '../../../../../view_models/user/extra_view/notification_view_model.dart';
+import '../../../../../widgets/login/extra_widget/chat/notification/notification_tile.dart';
 
 
 class NotificationsScreen extends StatelessWidget {

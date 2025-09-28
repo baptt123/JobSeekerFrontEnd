@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/messages_view_model.dart';
-import '../../../widgets/login/chat/message_tile.dart';
+import '../../../../../view_models/user/extra_view/messages_view_model.dart';
+import '../../../../../widgets/login/extra_widget/chat/message_tile.dart';
 
 
 

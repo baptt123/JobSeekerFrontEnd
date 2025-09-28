@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../widgets/login/filter_and_add_information/custom_button.dart';
-import '../../../widgets/login/filter_and_add_information/custom_text_box.dart';
-import '../../../widgets/login/filter_and_add_information/filter_chip_button.dart';
+import '../../../../../widgets/login/extra_widget/chat/filter_and_add_information/custom_button.dart';
+import '../../../../../widgets/login/filter_and_add_information/custom_text_box.dart';
+import '../../../../../widgets/login/extra_widget/chat/filter_and_add_information/filter_chip_button.dart';
 
 
 class FilterScreen extends StatelessWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/no_result_view_model.dart';
+import '../../../../../view_models/user/extra_view/no_result_view_model.dart';
 
 
 class NoResultsScreen extends StatelessWidget {

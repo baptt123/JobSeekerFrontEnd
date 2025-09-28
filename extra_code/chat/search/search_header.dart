@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/search_view_model.dart';
+import '../../../view_models/user/extra_view/search_view_model.dart';
 
 class SearchHeader extends StatelessWidget {
   const SearchHeader({super.key});

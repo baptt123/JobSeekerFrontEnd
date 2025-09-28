@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/chat_view_model.dart';
-import '../../../widgets/login/chat/chat_bubble.dart';
+import '../../../../../view_models/user/extra_view/chat_view_model.dart';
+import '../../../../../widgets/login/extra_widget/chat/chat_bubble.dart';
 
 
 class ChatScreen extends StatelessWidget {

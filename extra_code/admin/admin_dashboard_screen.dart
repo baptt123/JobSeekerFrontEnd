@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/admin/admin_dashboard_view_model.dart';
-import '../../../widgets/login/admin/admin_statistic_card.dart';
+import '../../lib/view_models/admin/admin_dashboard_view_model.dart';
+import '../../lib/widgets/login/extra_widget/chat/admin/admin_statistic_card.dart';
 
 
 class AdminDashboardScreen extends StatelessWidget {

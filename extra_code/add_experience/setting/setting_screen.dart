@@ -1,9 +1,9 @@
-import 'package:job_seeker_frontend/views/login/setting/setting_list.dart';
+import 'package:job_seeker_frontend/views/login/extra_screen/add_experience/setting/setting_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/logout_view_model.dart';
-import '../../../widgets/login/setting_and_update_password/primary_button.dart';
-import '../logout/logout_screen.dart';
+import '../../../../../view_models/user/logout_view_model.dart';
+import '../../../../../widgets/login/setting_and_update_password/primary_button.dart';
+import '../../../logout/logout_screen.dart';
 
 
 class SettingsScreen extends StatelessWidget {

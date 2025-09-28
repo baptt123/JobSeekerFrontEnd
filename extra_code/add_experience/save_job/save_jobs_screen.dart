@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../view_models/user/save_jobs_view_model.dart';
-import '../../../widgets/login/savejob/bottom_nav.dart';
-import '../../../widgets/login/savejob/job_card.dart';
-import '../../../widgets/login/savejob/job_option_sheet.dart';
+import '../../../../../view_models/user/extra_view/save_jobs_view_model.dart';
+import '../../../../../widgets/login/extra_widget/chat/savejob/bottom_nav.dart';
+import '../../../../../widgets/login/extra_widget/chat/savejob/job_card.dart';
+import '../../../../../widgets/login/extra_widget/chat/savejob/job_option_sheet.dart';
 
 
 class SavedJobsScreen extends StatelessWidget {

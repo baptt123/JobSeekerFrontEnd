@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/logout_view_model.dart';
-import '../../../view_models/user/setting_view_model.dart';
-import '../update_password/update_password_screen.dart';
+import '../../../../../view_models/user/logout_view_model.dart';
+import '../../../../../view_models/user/extra_view/setting_view_model.dart';
+import '../../../update_password/update_password_screen.dart';
 
 class SettingsList extends StatelessWidget {
   const SettingsList({super.key});

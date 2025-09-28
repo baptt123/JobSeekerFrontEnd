@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/profile_view_model.dart';
-import '../../../widgets/login/profile/profile_section.dart';
+import '../../../../../view_models/user/extra_view/profile_view_model.dart';
+import '../../../../../widgets/login/extra_widget/chat/profile/profile_section.dart';
 
 class ProfileScreen extends StatelessWidget {
   @override

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../widgets/login/savejob/bottom_nav.dart';
+import '../../../../../widgets/login/extra_widget/chat/savejob/bottom_nav.dart';
 
 class NoSavingsScreen extends StatelessWidget {
   const NoSavingsScreen({Key? key}) : super(key: key);

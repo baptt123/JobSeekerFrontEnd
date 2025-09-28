@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/add_experience_view_model.dart';
-import '../../../widgets/login/filter_and_add_information/custom_button.dart';
-import '../../../widgets/login/filter_and_add_information/custom_text_field.dart';
+import '../../../../view_models/user/extra_view/add_experience_view_model.dart';
+import '../../../../widgets/login/extra_widget/chat/filter_and_add_information/custom_button.dart';
+import '../../../../widgets/login/extra_widget/chat/filter_and_add_information/custom_text_field.dart';
 
 class AddExperienceScreen extends StatefulWidget {
   const AddExperienceScreen({super.key});
