@@ -1,3 +1,5 @@
+import 'company-entity.dart';
+
 class JobEntity {
   final int jobId;
   final int companyId;
@@ -10,6 +12,7 @@ class JobEntity {
   final String? location;
   final String? jobType;
   final DateTime createdAt;
+  final CompanyEntity? company; // thêm quan hệ
 
   JobEntity({
     required this.jobId,
@@ -23,6 +26,7 @@ class JobEntity {
     this.location,
     this.jobType,
     required this.createdAt,
+    this.company,
   });
 
   factory JobEntity.fromJson(Map<String, dynamic> json) => JobEntity(
@@ -32,24 +36,17 @@ class JobEntity {
     title: json['title'],
     description: json['description'],
     requirements: json['requirements'],
-    salaryMin: (json['salary_min'] as num?)?.toDouble(),
-    salaryMax: (json['salary_max'] as num?)?.toDouble(),
+    salaryMin: json['salary_min'] != null
+        ? double.tryParse(json['salary_min'].toString())
+        : null,
+    salaryMax: json['salary_max'] != null
+        ? double.tryParse(json['salary_max'].toString())
+        : null,
     location: json['location'],
     jobType: json['job_type'],
     createdAt: DateTime.parse(json['created_at']),
+    company: json['company'] != null
+        ? CompanyEntity.fromJson(json['company'])
+        : null,
   );
-
-  Map<String, dynamic> toJson() => {
-    'job_id': jobId,
-    'company_id': companyId,
-    'posted_by': postedBy,
-    'title': title,
-    'description': description,
-    'requirements': requirements,
-    'salary_min': salaryMin,
-    'salary_max': salaryMax,
-    'location': location,
-    'job_type': jobType,
-    'created_at': createdAt.toIso8601String(),
-  };
 }

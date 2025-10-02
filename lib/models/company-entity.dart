@@ -26,14 +26,4 @@ class CompanyEntity {
     logoUrl: json['logo_url'],
     createdAt: DateTime.parse(json['created_at']),
   );
-
-  Map<String, dynamic> toJson() => {
-    'company_id': companyId,
-    'name': name,
-    'description': description,
-    'website': website,
-    'address': address,
-    'logo_url': logoUrl,
-    'created_at': createdAt.toIso8601String(),
-  };
 }

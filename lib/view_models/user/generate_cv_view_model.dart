@@ -11,19 +11,21 @@ import '../../models/user-cv-entity.dart';
 enum ViewState { idle, busy, error }
 
 class GenerateCvViewModel extends ChangeNotifier {
+  /*
+  có thể lỗi này do việc sử dụng static method trong service
+   */
   final GenerativeCVService apiService;
-
   GenerateCvViewModel({required this.apiService});
 
   ViewState _state = ViewState.idle;
   String? _errorMessage;
   Uint8List? _lastPdfBytes;
-  UserCvEntity? _lastCreatedCv;
+  UserCVEntity? _lastCreatedCv;
 
   ViewState get state => _state;
   String? get errorMessage => _errorMessage;
   Uint8List? get lastPdfBytes => _lastPdfBytes;
-  UserCvEntity? get lastCreatedCv => _lastCreatedCv;
+  UserCVEntity? get lastCreatedCv => _lastCreatedCv;
 
   void _setState(ViewState s) {
     _state = s;
@@ -35,7 +37,7 @@ class GenerateCvViewModel extends ChangeNotifier {
       _setState(ViewState.busy);
       _errorMessage = null;
 
-      final bytes = await apiService.generateCV(prompt);
+      final bytes = await GenerativeCVService.generateCV(prompt);
       _lastPdfBytes = bytes as Uint8List?;
 
       // Save to temporary file and open
@@ -56,7 +58,7 @@ class GenerateCvViewModel extends ChangeNotifier {
       _setState(ViewState.busy);
       _errorMessage = null;
 
-      final cv = await apiService.createCvWithKeywords(dto);
+      final cv = await GenerativeCVService.createCvWithKeywords(dto);
       _lastCreatedCv = cv;
 
       _setState(ViewState.idle);

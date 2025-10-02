@@ -45,6 +45,8 @@ dependencies:
   dio: ^5.9.0
   file_picker: ^10.3.3
   google_mlkit_text_recognition: ^0.15.0
+  socket_io_client: ^3.1.2
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

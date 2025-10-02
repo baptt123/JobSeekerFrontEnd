@@ -1,15 +1,17 @@
 class NotificationEntity {
   final int notificationId;
   final int userId;
-  final String message;
+  final String? title;
+  final String? message;
   final bool isRead;
   final DateTime createdAt;
 
   NotificationEntity({
     required this.notificationId,
     required this.userId,
-    required this.message,
-    this.isRead = false,
+    this.title,
+    this.message,
+    required this.isRead,
     required this.createdAt,
   });
 
@@ -17,16 +19,9 @@ class NotificationEntity {
       NotificationEntity(
         notificationId: json['notification_id'],
         userId: json['user_id'],
+        title: json['title'],
         message: json['message'],
-        isRead: (json['is_read'] ?? 0) == 1,
+        isRead: json['is_read'],
         createdAt: DateTime.parse(json['created_at']),
       );
-
-  Map<String, dynamic> toJson() => {
-    'notification_id': notificationId,
-    'user_id': userId,
-    'message': message,
-    'is_read': isRead ? 1 : 0,
-    'created_at': createdAt.toIso8601String(),
-  };
 }

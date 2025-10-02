@@ -11,9 +11,4 @@ class KeywordEntity {
     keywordId: json['keyword_id'],
     keywordName: json['keyword_name'],
   );
-
-  Map<String, dynamic> toJson() => {
-    'keyword_id': keywordId,
-    'keyword_name': keywordName,
-  };
 }

@@ -11,9 +11,4 @@ class SkillEntity {
     skillId: json['skill_id'],
     skillName: json['skill_name'],
   );
-
-  Map<String, dynamic> toJson() => {
-    'skill_id': skillId,
-    'skill_name': skillName,
-  };
 }

@@ -32,16 +32,4 @@ class UserEntity {
     companyId: json['company_id'],
     createdAt: DateTime.parse(json['created_at']),
   );
-
-  Map<String, dynamic> toJson() => {
-    'user_id': userId,
-    'email': email,
-    'full_name': fullName,
-    'phone': phone,
-    'city': city,
-    'avatar_url': avatarUrl,
-    'role_id': roleId,
-    'company_id': companyId,
-    'created_at': createdAt.toIso8601String(),
-  };
 }

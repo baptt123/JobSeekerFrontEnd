@@ -26,14 +26,4 @@ class JobApplicationEntity {
     status: json['status'],
     appliedAt: DateTime.parse(json['applied_at']),
   );
-
-  Map<String, dynamic> toJson() => {
-    'application_id': applicationId,
-    'job_id': jobId,
-    'user_id': userId,
-    'cv_id': cvId,
-    'cover_letter': coverLetter,
-    'status': status,
-    'applied_at': appliedAt.toIso8601String(),
-  };
 }

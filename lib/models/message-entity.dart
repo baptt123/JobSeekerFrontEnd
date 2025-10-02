@@ -1,31 +1,31 @@
+import '../dto/message_response_dto.dart';
+
 class MessageEntity {
-  final int messageId;
+  final int? messageId;
   final int senderId;
   final int receiverId;
   final String content;
+  final bool isRead;
   final DateTime sentAt;
 
   MessageEntity({
-    required this.messageId,
+    this.messageId,
     required this.senderId,
     required this.receiverId,
     required this.content,
-    required this.sentAt,
-  });
+    this.isRead = false,
+    DateTime? sentAt,
+  }) : sentAt = sentAt ?? DateTime.now();
 
-  factory MessageEntity.fromJson(Map<String, dynamic> json) => MessageEntity(
-    messageId: json['message_id'],
-    senderId: json['sender_id'],
-    receiverId: json['receiver_id'],
-    content: json['content'],
-    sentAt: DateTime.parse(json['sent_at']),
-  );
-
-  Map<String, dynamic> toJson() => {
-    'message_id': messageId,
-    'sender_id': senderId,
-    'receiver_id': receiverId,
-    'content': content,
-    'sent_at': sentAt.toIso8601String(),
-  };
+  // Convert từ DTO backend sang domain model
+  factory MessageEntity.fromDto(MessageResponseDto dto) {
+    return MessageEntity(
+      messageId: dto.messageId,
+      senderId: dto.senderId,
+      receiverId: dto.receiverId,
+      content: dto.content,
+      isRead: dto.isRead,
+      sentAt: dto.sentAt,
+    );
+  }
 }
