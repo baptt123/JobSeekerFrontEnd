@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../view_models/user/chat_view_model.dart';
-import '../../widgets/login/chat/chat_input.dart';
-import '../../widgets/login/chat/chat_message_list.dart';
+import '../../../view_models/user/chat_view_model.dart';
+import '../../../widgets/login/chat/chat_input.dart';
+import '../../../widgets/login/chat/chat_message_list.dart';
 
 
 class ChatScreen extends StatelessWidget {
