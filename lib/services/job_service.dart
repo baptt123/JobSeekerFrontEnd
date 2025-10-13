@@ -27,11 +27,13 @@ class JobService {
   }
 
   static Future<List<dynamic>> searchJobs(String query) async {
+    final token = await TokenStorage.getAccessToken();
     try {
       final res = await _dio.get(
         '/jobs',
         queryParameters: {'query': query},
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(headers: {'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'}),
       );
 
       if (res.statusCode == 200) {
@@ -49,11 +51,12 @@ class JobService {
   }
 
   static Future<List<String>> suggestJobs(String query) async {
+    final token = await TokenStorage.getAccessToken();
     try {
       final res = await _dio.get(
         '/suggest',
         queryParameters: {'q': query},
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(headers: {'Content-Type': 'application/json','Authorization': 'Bearer $token'}),
       );
 
       if (res.statusCode == 200) {

@@ -99,7 +99,7 @@ class SignupScreen extends StatelessWidget {
                 onPressed: () {
                   // TODO: Implement Google sign up
                 },
-                assetImagePath: 'assets/icon/google logo.png',
+                assetImagePath: 'assets/icon/google_logo.png',
               ),
               const SizedBox(height: 24),
 

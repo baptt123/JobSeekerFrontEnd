@@ -45,5 +45,21 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- ✅ Quyền camera & micro cho cuộc gọi video -->
+    <key>NSCameraUsageDescription</key>
+    <string>Ứng dụng cần sử dụng camera để gọi video</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Ứng dụng cần sử dụng micro để gọi video</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Ứng dụng cần quyền truy cập camera để gọi video.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Ứng dụng cần quyền truy cập micro để thu âm khi gọi.</string>
+
+    <!-- (Tùy chọn, nếu bạn share screen hoặc stream âm thanh hệ thống) -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+    </array>
+
 </dict>
 </plist>

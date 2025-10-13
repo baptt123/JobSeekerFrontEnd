@@ -1,8 +1,27 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Không bắt buộc thiết bị phải có camera (tránh lỗi trên emulator) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" tools:ignore="DuplicateUsesFeature"
+                  tools:targetApi="5"/>
+    <uses-sdk tools:overrideLibrary="org.jitsi.meet.sdk,com.oney.WebRTCModule" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" tools:targetApi="4"/>
+    ...
     <application
-        android:label="job_seeker_frontend"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+            android:usesCleartextTraffic="true"
+            android:label="job_seeker_frontend"
+            android:name="${applicationName}"
+            android:icon="@mipmap/ic_launcher"
+            tools:replace="android:label" tools:targetApi="23"> <!-- ✅ thêm dòng này -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
