@@ -1,9 +1,11 @@
-class RegisterDto {
+// lib/models/register_request_model.dart
+
+class RegisterDTO {
   final String fullName;
   final String email;
   final String password;
 
- RegisterDto({
+  RegisterDTO({
     required this.fullName,
     required this.email,
     required this.password,
@@ -11,9 +13,9 @@ class RegisterDto {
 
   Map<String, dynamic> toJson() {
     return {
-      "full_name": fullName,
-      "email": email,
-      "password": password,
+      'full_name': fullName,
+      'email': email,
+      'password': password,
     };
   }
 }

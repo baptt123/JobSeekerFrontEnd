@@ -58,13 +58,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   Image.asset('assets/icon/logo.png', height: 80),
                   const SizedBox(height: 40),
                   const Text(
-                    "Let's get you Login!",
+                    "Mời bạn đăng nhập!",
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Enter your information below",
+                    "Hãy nhập thông tin của bạn ngay tại đây để đăng nhập",
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   ),
@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   OutlinedButton.icon(
                     onPressed: isLoading ? null : () => vm.loginWithGoogle(context),
                     icon: Image.asset('assets/icon/google logo.png', height: 24),
-                    label: const Text('Continue with Google',
+                    label: const Text('Đăng nhập với google',
                         style: TextStyle(color: Colors.black87, fontSize: 16)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      hintText: 'Enter Email',
+                      hintText: 'Email',
                       prefixIcon: Icon(Icons.email_outlined, color: Colors.grey.shade500),
                       filled: true,
                       fillColor: customColorScheme.surface,
@@ -121,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: passwordController,
                     obscureText: !_isPasswordVisible,
                     decoration: InputDecoration(
-                      hintText: 'Enter Password',
+                      hintText: 'Mật khẩu',
                       prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade500),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -151,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: TextButton(
                       onPressed: () { /* TODO: Handle Forgot Password */ },
                       child: Text(
-                        'Forgot Password?',
+                        'Quên mật khẩu?',
                         style: TextStyle(color: customColorScheme.primary),
                       ),
                     ),
@@ -184,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         strokeWidth: 3,
                       ),
                     )
-                        : const Text('Login', style: TextStyle(fontSize: 16)),
+                        : const Text('Đăng nhập', style: TextStyle(fontSize: 16)),
                   ),
                   const SizedBox(height: 40),
 
@@ -194,9 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       text: TextSpan(
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
                         children: [
-                          const TextSpan(text: "Don't have an account? "),
+                          const TextSpan(text: "Chưa có tài khoản? "),
                           TextSpan(
-                            text: 'Register Now',
+                            text: 'Đăng ký ngay tại đây',
                             style: TextStyle(
                               color: customColorScheme.secondary,
                               fontWeight: FontWeight.bold,

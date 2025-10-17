@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 // ... các import khác của bạn ...
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/view_models/user/register_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/splash_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/zoom_view_model.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
         ChangeNotifierProvider(create: (_) => SplashViewModel()),
         ChangeNotifierProvider(create: (_) => ZoomViewModel()),
+        ChangeNotifierProvider(create: (_) => RegisterViewModel()),
       ],
       child:  MyApp(),
     ),
