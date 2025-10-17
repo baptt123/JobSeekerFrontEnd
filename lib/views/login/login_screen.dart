@@ -14,19 +14,17 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
-  // Thêm biến state để quản lý việc ẩn/hiện mật khẩu
   bool _isPasswordVisible = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    // Dùng addPostFrameCallback để đảm bảo context đã sẵn sàng
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LoginViewModel>().autoLogin(context);
     });
   }
 
-  // Giải phóng controller khi widget bị hủy
   @override
   void dispose() {
     emailController.dispose();
@@ -36,12 +34,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<LoginViewModel>();
+    // Đổi thành read để tránh rebuild không cần thiết khi gõ phím
+    final vm = context.read<LoginViewModel>();
+    // Dùng watch để lắng nghe thay đổi của isLoading
+    final isLoading = context.watch<LoginViewModel>().isLoading;
     final theme = Theme.of(context);
     final customColorScheme = theme.colorScheme.copyWith(
-      primary: const Color(0xFF00C89C), // Màu xanh của logo và button
-      secondary: const Color(0xFF0077B6), // Màu cho link "Register Now"
-      surface: const Color(0xFFF2F2F2), // Màu nền cho text field
+      primary: const Color(0xFF00C89C),
+      secondary: const Color(0xFF0077B6),
+      surface: const Color(0xFFF2F2F2),
     );
 
     return Scaffold(
@@ -54,11 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Logo
-                  Image.asset('assets/logo.png', height: 80),
+                  Image.asset('assets/icon/logo.png', height: 80),
                   const SizedBox(height: 40),
-
-                  // 2. Tiêu đề
                   const Text(
                     "Let's get you Login!",
                     textAlign: TextAlign.center,
@@ -72,50 +70,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // 3. Nút đăng nhập social
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () { /* TODO: Handle Google Login */ },
-                          icon: Image.asset('assets/google_logo.png', height: 20), // Thay bằng đường dẫn logo của bạn
-                          label: const Text('Google', style: TextStyle(color: Colors.black87)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
+                  // --- CHỈNH SỬA: Chỉ giữ lại nút Google ---
+                  OutlinedButton.icon(
+                    onPressed: isLoading ? null : () => vm.loginWithGoogle(context),
+                    icon: Image.asset('assets/icon/google logo.png', height: 24),
+                    label: const Text('Continue with Google',
+                        style: TextStyle(color: Colors.black87, fontSize: 16)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () { /* TODO: Handle Facebook Login */ },
-                          icon: Image.asset('assets/facebook_logo.png', height: 20), // Thay bằng đường dẫn logo của bạn
-                          label: const Text('Facebook', style: TextStyle(color: Colors.black87)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
-                      ),
-                    ],
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
                   ),
                   const SizedBox(height: 30),
 
-                  // 4. Dòng chữ "Or login with"
                   Row(
                     children: [
                       const Expanded(child: Divider()),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Text(
-                          "Or login with",
+                          "Or login with Email",
                           style: TextStyle(color: Colors.grey.shade500),
                         ),
                       ),
@@ -124,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // 5. Ô nhập Email
+                  // --- Giữ nguyên các TextField ---
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -140,8 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // 6. Ô nhập Password
                   TextField(
                     controller: passwordController,
                     obscureText: !_isPasswordVisible,
@@ -171,7 +146,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // 7. Nút "Forgot Password?"
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -184,9 +158,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 8. Nút Login chính
+                  // --- CHỈNH SỬA: Sử dụng biến isLoading đã watch ở trên ---
                   ElevatedButton(
-                    onPressed: vm.isLoading
+                    onPressed: isLoading
                         ? null
                         : () => vm.login(
                       emailController.text.trim(),
@@ -201,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: vm.isLoading
+                    child: isLoading
                         ? const SizedBox(
                       height: 24,
                       width: 24,
@@ -214,7 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // 9. Dòng chữ "Don't have an account?"
+                  // --- Giữ nguyên phần đăng ký ---
                   Center(
                     child: RichText(
                       text: TextSpan(
@@ -245,3 +219,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+
