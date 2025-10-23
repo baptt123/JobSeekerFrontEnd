@@ -1,49 +1,45 @@
-import 'package:flutter/foundation.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+// lib/viewmodels/chat_viewmodel.dart
+import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/models/message-entity.dart';
+import 'package:job_seeker_frontend/services/chat_service.dart';
+import '../../services/socket_service.dart';
 
 class ChatViewModel extends ChangeNotifier {
-  late IO.Socket socket;
-  List<Map<String, dynamic>> messages = [];
-  bool isConnected = false;
+  final ChatService _api = ChatService();
+  final SocketService _socket = SocketService();
 
-  void connect() {
-    socket = IO.io('http://192.168.67.109:3000', {
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
+  List<MessageEntity> messages = [];
+  bool isLoading = false;
 
-    socket.connect();
-    socket.onConnect((_) {
-      isConnected = true;
-      notifyListeners();
-    });
-
-    socket.onDisconnect((_) {
-      isConnected = false;
-      notifyListeners();
-    });
-
-    socket.on('new_message_1', (data) { // demo receiverId = 1
-      messages.add(data);
-      notifyListeners();
-    });
+  void connect(int userId) {
+    _socket.connect(userId);
   }
 
-  void sendMessage(int senderId, int receiverId, String content) {
-    if (!isConnected) {
-      // offline: cache tạm
-      messages.add({'senderId': senderId, 'receiverId': receiverId, 'content': content, 'offline': true});
+  Future<void> loadMessages(int userA, int userB) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      messages = await _api.getConversation(userA, userB);
+    } finally {
+      isLoading = false;
       notifyListeners();
-    } else {
-      socket.emit('send_message', {'senderId': senderId, 'receiverId': receiverId, 'content': content});
     }
   }
 
-  void markAsRead(int messageId) {
-    socket.emit('mark_as_read', {'messageId': messageId});
+  void sendMessage(int senderId, int receiverId, String content) {
+    _socket.sendMessage(senderId, receiverId, content);
   }
 
-  void disposeSocket() {
-    socket.dispose();
+  void listenMessages() {
+    _socket.onNewMessage((msg) {
+      messages.add(msg);
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _socket.disconnect();
+    super.dispose();
   }
 }

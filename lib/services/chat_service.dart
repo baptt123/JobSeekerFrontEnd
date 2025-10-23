@@ -1,19 +1,40 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:job_seeker_frontend/models/message-entity.dart';
+import 'package:job_seeker_frontend/models/user-entity.dart';
 
 class ChatService {
-  final String baseUrl = 'http://192.168.67.109:3000';
+  final String baseUrl = "http://192.168.67.109:3000";
 
-  Future<Map<String, dynamic>> loginByFullName(String fullName) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/chat/login'),
-      body: jsonEncode({'full_name': fullName}),
+  Future<UserEntity> login(String fullName) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/messages/login'),
       headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'full_name': fullName}),
     );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+
+    print('>>> Response status: ${res.statusCode}');
+    print('>>> Response body: ${res.body}');
+
+    if (res.statusCode == 200|| res.statusCode==201) {
+      return UserEntity.fromJson(jsonDecode(res.body));
     } else {
-      throw Exception('Không tìm thấy người dùng');
+      throw Exception("User không tồn tại: ${res.body}");
+    }
+  }
+
+
+  Future<List<MessageEntity>> getConversation(int userA, int userB) async {
+    final res = await http.get(Uri.parse(
+        '$baseUrl/messages/conversation?userA=$userA&userB=$userB'));
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      return (data['messages'] as List)
+          .map((e) => MessageEntity.fromJson(e))
+          .toList();
+    } else {
+      throw Exception("Không thể tải cuộc trò chuyện");
     }
   }
 }
