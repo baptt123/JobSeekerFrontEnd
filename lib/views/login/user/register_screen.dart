@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/user/register_view_model.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -28,7 +29,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _submitForm(BuildContext context) {
     if (_formKey.currentState!.validate()) {
-      // Gọi hàm register từ ViewModel
       Provider.of<RegisterViewModel>(context, listen: false).register(
         fullName: _fullNameController.text,
         email: _emailController.text,
@@ -39,10 +39,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lắng nghe sự thay đổi của ViewModel
     final registerViewModel = Provider.of<RegisterViewModel>(context);
 
-    // Hiển thị thông báo khi đăng ký thành công
     if (registerViewModel.isSuccess) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,30 +49,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Có thể điều hướng đến màn hình đăng nhập ở đây
-        // Navigator.of(context).pushReplacementNamed('/login');
+        // Có thể điều hướng về Login ở đây nếu muốn tự động quay lại
+        // Navigator.pop(context);
       });
     }
 
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF00897B)),
+          onPressed: () => Navigator.pop(context), // ✅ Quay lại Login
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo
-                const Icon(Icons.hub, size: 80, color: Color(0xFF00897B)), // Placeholder logo
+                const Icon(Icons.hub, size: 80, color: Color(0xFF00897B)),
                 const SizedBox(height: 24),
 
                 // Title
                 const Text(
                   'Đăng kí tài khoản tại đây!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -84,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Full Name Field
+                // Họ tên
                 _buildTextFormField(
                   controller: _fullNameController,
                   labelText: 'Họ tên',
@@ -97,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Email Field
+                // Email
                 _buildTextFormField(
                   controller: _emailController,
                   labelText: 'Email',
@@ -114,7 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Password Field
+                // Mật khẩu
                 _buildTextFormField(
                   controller: _passwordController,
                   labelText: 'Mật khẩu',
@@ -131,7 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Confirm Password Field
+                // Xác nhận mật khẩu
                 _buildTextFormField(
                   controller: _confirmPasswordController,
                   labelText: 'Xác nhận mật khẩu',
@@ -145,7 +150,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Hiển thị lỗi từ server nếu có
                 if (registerViewModel.errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
@@ -156,7 +160,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
 
-                // Register Button
+                // Nút đăng ký
                 ElevatedButton(
                   onPressed: registerViewModel.isLoading ? null : () => _submitForm(context),
                   style: ElevatedButton.styleFrom(
@@ -179,14 +183,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Login Link
+                // Liên kết đăng nhập
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Đã có tài khoản "),
                     GestureDetector(
                       onTap: () {
-                        // Điều hướng đến màn hình Login
+                        Navigator.pop(context); // ✅ Quay về trang Login
                       },
                       child: const Text(
                         'Đăng nhập tại đây',

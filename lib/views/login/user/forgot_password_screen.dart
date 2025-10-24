@@ -51,8 +51,8 @@ class ForgotPasswordScreen extends StatelessWidget {
                     // Bạn có thể thêm ảnh minh họa ở đây
                     // Image.asset('assets/your_image.png'),
                     Center(
-                      child: Image.network(
-                        'https://i.imgur.com/gA3G5g1.png', // Ảnh minh họa tương tự
+                      child: Image.asset(
+                        'assets/icon/job search.jpg', // Ảnh minh họa tương tự
                         height: 250,
                       ),
                     ),

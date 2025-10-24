@@ -3,14 +3,14 @@ import 'package:job_seeker_frontend/views/login/test/pdf_cv_generator_screen.dar
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-class InputScreen extends StatefulWidget {
-  const InputScreen({super.key});
+class InputCVGeneratorScreen extends StatefulWidget {
+  const InputCVGeneratorScreen({super.key});
 
   @override
-  State<InputScreen> createState() => _InputScreenState();
+  State<InputCVGeneratorScreen> createState() => _InputCVGeneratorScreenState();
 }
 
-class _InputScreenState extends State<InputScreen> {
+class _InputCVGeneratorScreenState extends State<InputCVGeneratorScreen> {
   final _usernameController = TextEditingController();
 
   @override

@@ -1,8 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../../view_models/user/login_view_model.dart';
+import 'forgot_password_screen.dart'; // ✅ import màn hình quên mật khẩu
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Dùng addPostFrameCallback để đảm bảo context đã sẵn sàng
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LoginViewModel>().autoLogin(context);
     });
@@ -34,9 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Đổi thành read để tránh rebuild không cần thiết khi gõ phím
     final vm = context.read<LoginViewModel>();
-    // Dùng watch để lắng nghe thay đổi của isLoading
     final isLoading = context.watch<LoginViewModel>().isLoading;
     final theme = Theme.of(context);
     final customColorScheme = theme.colorScheme.copyWith(
@@ -55,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset('assets/icon/logo.png', height: 80),
+                  Image.asset('assets/icon/logo.png', height: 300,width: 300,),
                   const SizedBox(height: 40),
                   const Text(
                     "Mời bạn đăng nhập!",
@@ -66,16 +65,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     "Hãy nhập thông tin của bạn ngay tại đây để đăng nhập",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 30),
 
-                  // --- CHỈNH SỬA: Chỉ giữ lại nút Google ---
                   OutlinedButton.icon(
                     onPressed: isLoading ? null : () => vm.loginWithGoogle(context),
                     icon: Image.asset('assets/icon/google logo.png', height: 24),
-                    label: const Text('Đăng nhập với google',
-                        style: TextStyle(color: Colors.black87, fontSize: 16)),
+                    label: const Text(
+                      'Đăng nhập với Google',
+                      style: TextStyle(color: Colors.black87, fontSize: 16),
+                    ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -92,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Text(
-                          "Or login with Email",
+                          "Hoặc đăng nhập bằng Email",
                           style: TextStyle(color: Colors.grey.shade500),
                         ),
                       ),
@@ -101,7 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // --- Giữ nguyên các TextField ---
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -117,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
                   TextField(
                     controller: passwordController,
                     obscureText: !_isPasswordVisible,
@@ -149,7 +149,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () { /* TODO: Handle Forgot Password */ },
+                      onPressed: () {
+                        // ✅ Điều hướng sang trang quên mật khẩu
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                        );
+                      },
                       child: Text(
                         'Quên mật khẩu?',
                         style: TextStyle(color: customColorScheme.primary),
@@ -158,7 +164,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // --- CHỈNH SỬA: Sử dụng biến isLoading đã watch ở trên ---
                   ElevatedButton(
                     onPressed: isLoading
                         ? null
@@ -188,7 +193,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // --- Giữ nguyên phần đăng ký ---
                   Center(
                     child: RichText(
                       text: TextSpan(
@@ -203,7 +207,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                // TODO: Navigate to Register Screen
+                                // ✅ Điều hướng sang trang đăng ký
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                                );
                               },
                           ),
                         ],
@@ -219,5 +227,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-

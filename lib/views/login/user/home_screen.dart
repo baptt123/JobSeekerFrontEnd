@@ -1,6 +1,7 @@
 // lib/views/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../../view_models/user/home_view_model.dart';
@@ -170,7 +171,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildSearchField(Icons.location_on_outlined, 'Location'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchScreen()),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF008080),
               minimumSize: const Size(double.infinity, 50),
@@ -183,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 16, color: Colors.white),
             ),
           ),
+
         ],
       ),
     );

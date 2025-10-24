@@ -37,7 +37,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/views/login/test/chat_view_screen.dart';
+import 'package:job_seeker_frontend/views/login/test/cv_generator_screen.dart';
 import 'package:job_seeker_frontend/views/login/test/login_view_chat_screen.dart';
+import 'package:job_seeker_frontend/views/login/test/scan_pdf_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
@@ -63,6 +65,8 @@ class MyApp extends StatelessWidget {
         '/search': (_) => SearchScreen(),
         // '/chat': (_) => ChatViewScreen(),
         '/login_chat': (_) => LoginChatViewScreen(),
+        '/cv_generator': (_) => InputCVGeneratorScreen(),
+        '/scan_pdf': (_) => ScanPdfScreen(),
       },
     );
   }
@@ -80,6 +84,8 @@ class MainMenu extends StatelessWidget {
     {'title': 'Search', 'route': '/search'},
     {'title': 'Chat', 'route': '/chat'},
     {'title': 'Login Chat', 'route': '/login_chat'},
+    {'title': 'CV Generator', 'route': '/cv_generator'},
+    {'title':' Test Scan PDF', 'route': '/scan_pdf'},
   ];
 
   @override
