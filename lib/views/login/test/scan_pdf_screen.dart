@@ -1,106 +1,134 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:pdfx/pdfx.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:path_provider/path_provider.dart';
-
-class ScanPdfScreen extends StatefulWidget {
+import 'package:provider/provider.dart';
+import '../../../view_models/user/scan_pdf_view_model.dart';
+class ScanPdfScreen extends StatelessWidget {
   const ScanPdfScreen({Key? key}) : super(key: key);
 
   @override
-  State<ScanPdfScreen> createState() => _ScanPdfScreenState();
-}
-
-class _ScanPdfScreenState extends State<ScanPdfScreen> {
-  String extractedText = "";
-  bool isLoading = false;
-
-  Future<void> _pickAndScanPdf() async {
-    setState(() {
-      extractedText = "";
-      isLoading = true;
-    });
-
-    // 🟢 Chọn file PDF
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf'],
-    );
-
-    if (result == null) {
-      setState(() => isLoading = false);
-      return;
-    }
-
-    final file = File(result.files.single.path!);
-    final pdfDoc = await PdfDocument.openFile(file.path);
-    final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-
-    StringBuffer buffer = StringBuffer();
-
-    // 🟠 Lặp qua từng trang PDF, render thành ảnh, rồi scan bằng ML Kit
-    for (int i = 1; i <= pdfDoc.pagesCount; i++) {
-      final page = await pdfDoc.getPage(i);
-
-      final imageFile = await _renderPageAsImage(page, i);
-      final inputImage = InputImage.fromFile(imageFile);
-
-      final recognizedText = await textRecognizer.processImage(inputImage);
-      buffer.writeln(recognizedText.text);
-
-      await page.close();
-    }
-
-    await textRecognizer.close();
-
-    setState(() {
-      extractedText = buffer.toString();
-      isLoading = false;
-    });
-  }
-
-  Future<File> _renderPageAsImage(PdfPage page, int index) async {
-    final image = await page.render(
-      width: page.width,
-      height: page.height,
-      format: PdfPageImageFormat.png,
-    );
-
-    final tempDir = await getTemporaryDirectory();
-    final imageFile = File("${tempDir.path}/page_$index.png");
-    await imageFile.writeAsBytes(image!.bytes);
-    return imageFile;
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Lắng nghe thay đổi từ ViewModel
+    final viewModel = context.watch<ScanPdfViewModel>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Scan nội dung PDF")),
+      appBar: AppBar(
+        title: const Text("Trích xuất nội dung PDF"),
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ElevatedButton.icon(
-              onPressed: isLoading ? null : _pickAndScanPdf,
-              icon: const Icon(Icons.upload_file),
-              label: const Text("Chọn file PDF để quét"),
+            // --- 1. Khung Upload File (Đã làm đẹp) ---
+            _buildFileUploadButton(context, viewModel),
+
+            const SizedBox(height: 24),
+
+            // --- 2. Khung Nội dung (Đã làm đẹp) ---
+            Text(
+              "Nội dung trích xuất:",
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 20),
-            if (isLoading)
-              const CircularProgressIndicator()
-            else
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Text(
-                    extractedText.isEmpty
-                        ? "Chưa có nội dung nào được quét."
-                        : extractedText,
-                    style: const TextStyle(fontSize: 16),
-                  ),
+            const SizedBox(height: 8),
+            _buildExtractedContentBox(context, viewModel),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Widget cho nút/khung upload file
+  Widget _buildFileUploadButton(BuildContext context, ScanPdfViewModel viewModel) {
+    return GestureDetector(
+      // Chỉ cho phép nhấn khi không loading
+      onTap: viewModel.isLoading ? null : viewModel.pickAndScanPdf,
+      child: Container( // <-- Bỏ DottedBorder, chỉ giữ lại Container
+        height: 150,
+        decoration: BoxDecoration(
+          color: viewModel.isLoading ? Colors.grey[200] : Colors.greenAccent.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          // 👇 Thay thế DottedBorder bằng Border.all (viền nét liền)
+          border: Border.all(
+            color: viewModel.isLoading ? Colors.grey : Colors.greenAccent.withOpacity(0.8),
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: viewModel.isLoading && viewModel.fileName.isNotEmpty
+              ? Column( // Hiển thị loading và tên file
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                "Đang xử lý: ${viewModel.fileName}",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          )
+              : Column( // Hiển thị icon và text
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.upload_file_rounded,
+                size: 50,
+                color: Colors.greenAccent.withOpacity(0.8),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Nhấn để chọn file PDF",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.greenAccent.withOpacity(0.9),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Widget cho khung hiển thị nội dung
+  Widget _buildExtractedContentBox(BuildContext context, ScanPdfViewModel viewModel) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
+            ),
           ],
+        ),
+        child: viewModel.isLoading && viewModel.fileName.isEmpty
+            ? const Center( // Trạng thái loading (khi chưa có tên file)
+          child: CircularProgressIndicator(),
+        )
+            : viewModel.extractedText.isEmpty
+            ? Center( // Trạng thái ban đầu
+          child: Text(
+            "Nội dung được trích xuất sẽ xuất hiện ở đây...",
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+        )
+            : SingleChildScrollView( // Hiển thị nội dung
+          child: SelectableText( // Dùng SelectableText để cho phép copy
+            viewModel.extractedText,
+            style: const TextStyle(fontSize: 16, height: 1.5),
+          ),
         ),
       ),
     );
