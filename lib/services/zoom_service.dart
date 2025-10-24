@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
 
 import '../dto/zoom_meeting_dto.dart';
+import '../utils/constant_api.dart';
 
 class ZoomService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'http://192.168.67.109:3000')); // 🔧 đổi IP theo backend của bạn
+  final Dio _dio = Dio(
+    BaseOptions(baseUrl: ConstantAPI.baseUrl),
+  ); // 🔧 đổi IP theo backend của bạn
 
   Future<ZoomMeetingDto> createMeeting(String topic) async {
     try {

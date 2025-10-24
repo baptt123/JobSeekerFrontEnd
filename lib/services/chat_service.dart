@@ -3,8 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:job_seeker_frontend/models/message-entity.dart';
 import 'package:job_seeker_frontend/models/user-entity.dart';
 
+import '../utils/constant_api.dart';
+
 class ChatService {
-  final String baseUrl = "http://192.168.67.109:3000";
+  final String baseUrl =  ConstantAPI.baseUrl;
 
   Future<UserEntity> login(String fullName) async {
     final res = await http.post(

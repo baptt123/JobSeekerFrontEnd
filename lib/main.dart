@@ -11,7 +11,6 @@ import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/login_chat_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/register_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/search_view_model.dart';
-import 'package:job_seeker_frontend/view_models/user/splash_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/zoom_view_model.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -26,7 +25,6 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
-        ChangeNotifierProvider(create: (_) => SplashViewModel()),
         ChangeNotifierProvider(create: (_) => ZoomViewModel()),
         ChangeNotifierProvider(create: (_) => RegisterViewModel()),
         ChangeNotifierProvider(create: (_) => ChangePasswordViewModel()),

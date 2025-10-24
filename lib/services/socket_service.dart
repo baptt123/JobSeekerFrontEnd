@@ -1,12 +1,13 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../models/message-entity.dart';
+import '../utils/constant_api.dart';
 
 class SocketService {
   late IO.Socket socket;
 
   void connect(int userId) {
-    socket = IO.io('http://192.168.67.109:3000', {
+    socket = IO.io(ConstantAPI.baseUrl, {
       'transports': ['websocket'],
       'autoConnect': true,
     });

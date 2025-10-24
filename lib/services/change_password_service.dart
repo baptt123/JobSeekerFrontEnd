@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:job_seeker_frontend/utils/constant_api.dart';
 import '../dto/change_password_dto.dart';
 
 class ChangePasswordService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://192.168.67.109:3000/auth', // <<< THAY ĐỔI URL CỦA BẠN
+      baseUrl: ConstantAPI.baseUrl+'/auth', // <<< THAY ĐỔI URL CỦA BẠN
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 3),
     ),

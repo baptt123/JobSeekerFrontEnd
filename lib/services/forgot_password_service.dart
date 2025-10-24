@@ -1,12 +1,13 @@
 // services/auth_service.dart
 
 import 'package:dio/dio.dart';
+import 'package:job_seeker_frontend/utils/constant_api.dart';
 
 import '../dto/forgot_password_dto.dart';
 
 class ForgotPasswordService {
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.67.109:3000/auth', // <-- THAY ĐỔI URL API CỦA BẠN
+    baseUrl: ConstantAPI.baseUrl+'/auth', // <-- THAY ĐỔI URL API CỦA BẠN
   ));
 
   // 2. Thay đổi tham số từ String thành ForgotPasswordDto

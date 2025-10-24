@@ -4,12 +4,13 @@ import 'package:dio/dio.dart';
 
 import '../dto/pagination_job_response_dto.dart';
 import '../models/job-entity.dart';
+import '../utils/constant_api.dart';
 
 class JobService {
   // Thay thế 'YOUR_BASE_API_URL' bằng URL backend của bạn
   // Ví dụ: 'http://10.0.2.2:3000/api' (cho Android emulator)
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.67.109:3000/job',
+    baseUrl: ConstantAPI.baseUrl+'/job',
   ));
 
   Future<PaginatedJobsResponse> getAllJobs({int page = 1, int limit = 10}) async {

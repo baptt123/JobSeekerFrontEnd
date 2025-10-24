@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../models/user-token-entity.dart'; // Giữ nguyên model của bạn
+import '../models/user-token-entity.dart';
+import '../utils/constant_api.dart'; // Giữ nguyên model của bạn
 
 class LoginService {
   // THAY ĐỔI ĐỊA CHỈ IP NẾU CẦN
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'http://192.168.67.109:3000/auth'));
+  final Dio _dio = Dio(BaseOptions(baseUrl: ConstantAPI.baseUrl+'/auth'));
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // Sửa tên constructor cho đúng với tên class
