@@ -1,8 +1,7 @@
-// lib/views/register_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/user/register_view_model.dart';
+import '../../../widget/user/register_text_field.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -90,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 40),
 
                 // Họ tên
-                _buildTextFormField(
+                CustomTextFormField(
                   controller: _fullNameController,
                   labelText: 'Họ tên',
                   validator: (value) {
@@ -103,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
 
                 // Email
-                _buildTextFormField(
+                CustomTextFormField(
                   controller: _emailController,
                   labelText: 'Email',
                   keyboardType: TextInputType.emailAddress,
@@ -120,7 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
 
                 // Mật khẩu
-                _buildTextFormField(
+                CustomTextFormField(
                   controller: _passwordController,
                   labelText: 'Mật khẩu',
                   obscureText: true,
@@ -137,7 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 20),
 
                 // Xác nhận mật khẩu
-                _buildTextFormField(
+                CustomTextFormField(
                   controller: _confirmPasswordController,
                   labelText: 'Xác nhận mật khẩu',
                   obscureText: true,
@@ -162,7 +161,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 // Nút đăng ký
                 ElevatedButton(
-                  onPressed: registerViewModel.isLoading ? null : () => _submitForm(context),
+                  onPressed: registerViewModel.isLoading
+                      ? null
+                      : () => _submitForm(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00897B),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -174,7 +175,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? const SizedBox(
                     height: 24,
                     width: 24,
-                    child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 3, color: Colors.white),
                   )
                       : const Text(
                     'Đăng kí',
@@ -206,32 +208,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  TextFormField _buildTextFormField({
-    required TextEditingController controller,
-    required String labelText,
-    required FormFieldValidator<String> validator,
-    bool obscureText = false,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: labelText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF00897B), width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

@@ -9,11 +9,12 @@ import '../utils/constant_api.dart';
 class JobService {
   // Thay thế 'YOUR_BASE_API_URL' bằng URL backend của bạn
   // Ví dụ: 'http://10.0.2.2:3000/api' (cho Android emulator)
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: ConstantAPI.baseUrl+'/job',
-  ));
+  final Dio _dio = Dio(BaseOptions(baseUrl: ConstantAPI.baseUrl + '/job'));
 
-  Future<PaginatedJobsResponse> getAllJobs({int page = 1, int limit = 10}) async {
+  Future<PaginatedJobsResponse> getAllJobs({
+    int page = 1,
+    int limit = 10,
+  }) async {
     try {
       final response = await _dio.get(
         '/get-all-jobs',
@@ -29,15 +30,13 @@ class JobService {
       rethrow;
     }
   }
+
   /// Gọi API /search-jobs
   Future<List<JobEntity>> searchJobs(String query, {int size = 10}) async {
     try {
       final response = await _dio.get(
         '/search-jobs',
-        queryParameters: {
-          'query': query,
-          'size': size,
-        },
+        queryParameters: {'query': query, 'size': size},
       );
 
       if (response.statusCode == 200 && response.data is List) {
@@ -81,6 +80,51 @@ class JobService {
     } catch (e) {
       print('Lỗi [suggestJobs]: $e');
       return []; // Trả về list rỗng khi có lỗi
+    }
+  }
+
+  Future<JobEntity> getJobDetail(String title) async {
+    try {
+      Response response;
+
+      // GIẢ ĐỊNH 1: Bạn dùng @Param('title') với route 'detail/:title'
+      // Mã hóa title để đảm bảo URL hợp lệ
+      final encodedTitle = Uri.encodeComponent(title);
+      // Dio sẽ tự động nối '/detail/$encodedTitle' vào baseUrl
+      response = await _dio.get('/detail/$encodedTitle');
+
+      /*
+      // GIẢ ĐỊNH 2: Nếu bạn BẮT BUỘC dùng @Query('title') với route 'detail'
+      response = await _dio.get(
+        '/detail', // Hoặc bất cứ path nào bạn định nghĩa
+        queryParameters: {'title': title},
+      );
+      */
+
+      // Dio tự động giải mã JSON (và xử lý UTF-8).
+      // response.data đã là một Map<String, dynamic>
+      if (response.data != null) {
+        return JobEntity.fromJson(response.data);
+      } else {
+        throw Exception('Response data is null');
+      }
+    } on DioException catch (e) {
+      // Xử lý các lỗi HTTP (404, 500...) hoặc lỗi mạng
+      String errorMessage = 'Failed to load job detail.';
+      if (e.response != null) {
+        // Lỗi từ server (4xx, 5xx)
+        errorMessage =
+            'Error ${e.response?.statusCode}: ${e.response?.data?['message'] ?? e.message}';
+      } else {
+        // Lỗi kết nối, timeout...
+        errorMessage = 'Network error: ${e.message}';
+      }
+      print('Dio error: $errorMessage'); // Log lỗi
+      throw Exception(errorMessage);
+    } catch (e) {
+      // Bắt các lỗi khác (ví dụ: lỗi parsing JSON)
+      print('Unexpected error: $e');
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 }

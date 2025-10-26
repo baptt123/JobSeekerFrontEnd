@@ -60,6 +60,10 @@
     <array>
         <string>audio</string>
     </array>
-
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Chúng tôi cần quyền này để lưu CV (PDF) của bạn vào thư viện ảnh.</string>
+<key>LSSupportsOpeningDocumentsInPlace</key>
+<true/>
+<key>UISupportsDocumentBrowser</key>
 </dict>
 </plist>

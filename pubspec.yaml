@@ -61,6 +61,7 @@ dependencies:
   firebase_messaging: ^15.0.1
   google_sign_in: ^6.2.1
   fluttertoast: ^8.2.6
+  file_saver: ^0.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
