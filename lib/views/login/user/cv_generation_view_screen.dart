@@ -20,107 +20,198 @@ class _CvGenerationViewState extends State<CvGenerationView> {
     super.dispose();
   }
 
-  // Hàm xử lý khi nhấn nút
   void _onGeneratePressed() {
     final prompt = _promptController.text;
     if (prompt.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập mô tả CV của bạn')),
+        SnackBar(
+          content: const Text('Vui lòng nhập mô tả CV của bạn'),
+          backgroundColor: Colors.red.shade600,
+        ),
       );
       return;
     }
-
-    // Gọi ViewModel để bắt đầu tạo CV
-    // `listen: false` vì chúng ta đang ở trong một hàm callback
     context.read<CvGenerationViewModel>().generateCv(prompt);
   }
 
   @override
   Widget build(BuildContext context) {
+    // --- Chọn màu xanh lá chủ đạo ---
+    // Bạn có thể đổi thành Colors.green.shade600, Color(0xFF4CAF50), v.v.
+    final Color primaryColor = Colors.teal.shade600;
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tạo CV với AI'),
+        // --- 1. AppBar với màu xanh lá ---
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 1,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // 1. Ô nhập liệu
-            TextField(
-              controller: _promptController,
-              maxLines: 10,
-              decoration: const InputDecoration(
-                hintText: 'Mô tả về bản thân, kinh nghiệm, kỹ năng... '
-                    '(Ví dụ: "làm cv cho lập trình viên backend nodejs 2 năm kinh nghiệm"...)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // 2. Nút bấm và trạng thái
-            // 'Consumer' sẽ tự động "vẽ lại" phần này khi ViewModel thay đổi
-            Consumer<CvGenerationViewModel>(
-              builder: (context, viewModel, child) {
-                // Xử lý điều hướng KHI TẠO CV XONG
-                if (viewModel.state == CvGenerationState.success &&
-                    viewModel.pdfData != null) {
-                  // Dùng addPostFrameCallback để điều hướng an toàn
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PdfPreviewView(
-                          pdfData: viewModel.pdfData!,
-                        ),
-                      ),
-                    ).then((_) {
-                      // Khi quay lại từ trang preview, reset state
-                      viewModel.resetState();
-                    });
-                  });
-                }
-
-                // HIỂN THỊ NÚT BẤM HOẶC LOADING
-                if (viewModel.state == CvGenerationState.loading) {
-                  return const Column(
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 10),
-                      Text('AI đang tạo CV, vui lòng chờ...'),
-                    ],
-                  );
-                }
-
-                return ElevatedButton.icon(
-                  onPressed: _onGeneratePressed,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('Tạo CV Ngay'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 15),
-                    textStyle: const TextStyle(fontSize: 16),
+      body: Container(
+        // --- 2. Nền Gradient cho sặc sỡ ---
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryColor.withOpacity(0.05), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        // --- 3. SingleChildScrollView để tránh lỗi keyboard ---
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0), // Tăng padding
+            child: Column(
+              children: [
+                // --- 4. Icon trang trí ---
+                Icon(
+                  Icons.auto_stories_outlined,
+                  size: 80,
+                  color: primaryColor.withOpacity(0.8),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Mô tả CV mơ ước của bạn',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
                   ),
-                );
-              },
-            ),
+                ),
+                const SizedBox(height: 24),
 
-            const SizedBox(height: 20),
+                // --- 5. Ô nhập liệu được style lại ---
+                TextField(
+                  controller: _promptController,
+                  maxLines: 8,
+                  decoration: InputDecoration(
+                    hintText: 'Mô tả về bản thân, kinh nghiệm, kỹ năng... '
+                        '(Ví dụ: "làm cv cho lập trình viên backend nodejs 2 năm kinh nghiệm"...)',
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.all(16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none, // Bỏ viền mặc định
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
-            // 3. Hiển thị lỗi (nếu có)
-            Consumer<CvGenerationViewModel>(
-              builder: (context, viewModel, child) {
-                if (viewModel.state == CvGenerationState.error &&
-                    viewModel.errorMessage != null) {
-                  return Text(
-                    viewModel.errorMessage!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    textAlign: TextAlign.center,
-                  );
-                }
-                return const SizedBox.shrink(); // Không có lỗi, ẩn đi
-              },
+                // 6. Nút bấm và trạng thái
+                Consumer<CvGenerationViewModel>(
+                  builder: (context, viewModel, child) {
+                    // Xử lý điều hướng (giữ nguyên)
+                    if (viewModel.state == CvGenerationState.success &&
+                        viewModel.pdfData != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PdfPreviewView(
+                              pdfData: viewModel.pdfData!,
+                            ),
+                          ),
+                        ).then((_) {
+                          viewModel.resetState();
+                        });
+                      });
+                    }
+
+                    // HIỂN THỊ LOADING (Style lại)
+                    if (viewModel.state == CvGenerationState.loading) {
+                      return Column(
+                        children: [
+                          CircularProgressIndicator(
+                            // --- 7. Loading màu xanh lá ---
+                            valueColor:
+                            AlwaysStoppedAnimation<Color>(primaryColor),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'AI đang tạo CV, vui lòng chờ...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    // HIỂN THỊ NÚT BẤM (Style lại)
+                    return ElevatedButton.icon(
+                      onPressed: _onGeneratePressed,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Tạo CV Ngay'),
+                      // --- 8. Style nút bấm cho đẹp ---
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor, // Màu nền xanh
+                        foregroundColor: Colors.white, // Màu chữ/icon trắng
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 18),
+                        textStyle: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                          BorderRadius.circular(30), // Bo tròn
+                        ),
+                        elevation: 5, // Đổ bóng
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                // 9. Hiển thị lỗi (Style lại)
+                Consumer<CvGenerationViewModel>(
+                  builder: (context, viewModel, child) {
+                    if (viewModel.state == CvGenerationState.error &&
+                        viewModel.errorMessage != null) {
+                      // --- 10. Hộp thông báo lỗi rõ ràng ---
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline,
+                                color: Colors.red.shade700),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                viewModel.errorMessage!,
+                                style: TextStyle(
+                                  color: Colors.red.shade900,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

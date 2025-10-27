@@ -10,6 +10,7 @@ import '../../../widget/user/home/home_header.dart';
 import '../../../widget/user/home/job_list.dart';
 import '../../../widget/user/home/search_bar.dart';
 import '../../../widget/user/home/search_title.dart';
+import 'filter_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -46,7 +47,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
-      appBar: const HomeAppBar(), // <-- Widget mới
+      appBar: HomeAppBar(
+        onFilterPressed: () => _showFilterScreen(context),
+      ), // <-- Widget mới
       body: Consumer<HomeViewModel>(
         builder: (context, vm, child) {
           if (vm.state == HomeState.loading && vm.jobs.isEmpty) {
@@ -92,6 +95,29 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  void _showFilterScreen(BuildContext context) {
+    // Lấy VM hiện tại
+    final vm = context.read<HomeViewModel>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      // Cho phép sheet cao
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        // Cung cấp HomeViewModel cho FilterScreen
+        // để nó có thể đọc filter cũ và gọi hàm apply/clear
+        return ChangeNotifierProvider.value(
+          value: vm,
+          child: const FilterScreen(),
+        );
+      },
     );
   }
 }

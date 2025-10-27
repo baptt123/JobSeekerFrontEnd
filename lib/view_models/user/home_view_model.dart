@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/models/job-entity.dart';
+// Import DTO mới
 
+import '../../dto/filter_job_dto.dart';
 import '../../services/job_service.dart';
 
 enum HomeState { idle, loading, success, error }
@@ -21,26 +23,40 @@ class HomeViewModel extends ChangeNotifier {
 
   // Biến cho phân trang
   int _currentPage = 1;
-  bool _hasMore = true; // Còn dữ liệu để tải
-  bool _isLoadingMore = false; // Đang tải trang tiếp theo
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
   bool get isLoadingMore => _isLoadingMore;
+
+  // ---- BIẾN MỚI CHO FILTER ----
+  FilterJobDto _currentFilter = FilterJobDto(); // Giữ filter đang áp dụng
+  FilterJobDto get currentFilter => _currentFilter;
+  bool _isFiltered = false; // Trạng thái đang lọc
+  bool get isFiltered => _isFiltered;
+  // -----------------------------
 
   HomeViewModel() {
     fetchJobs(); // Tải trang đầu tiên
   }
 
-  // Tải dữ liệu lần đầu hoặc làm mới
+  // Tải dữ liệu lần đầu HOẶC "XÓA BỘ LỌC"
   Future<void> fetchJobs() async {
     _state = HomeState.loading;
-    _currentPage = 1; // Reset về trang 1
-    _jobs = [];       // Xóa danh sách cũ
-    _hasMore = true;  // Đặt lại
+    _currentPage = 1;
+    _jobs = [];
+    _hasMore = true;
+
+    // ---- RESET TRẠNG THÁI FILTER ----
+    _isFiltered = false;
+    _currentFilter = FilterJobDto();
+    // ---------------------------------
+
     notifyListeners();
 
     try {
+      // Gọi lại hàm getAllJobs (có phân trang)
       final response = await _jobService.getAllJobs(page: _currentPage, limit: 10);
       _jobs = response.data;
-      _hasMore = _currentPage < response.totalPages; // Kiểm tra còn trang không
+      _hasMore = _currentPage < response.totalPages;
       _state = HomeState.success;
     } catch (e) {
       _state = HomeState.error;
@@ -52,24 +68,50 @@ class HomeViewModel extends ChangeNotifier {
 
   // Tải thêm dữ liệu khi cuộn
   Future<void> fetchMoreJobs() async {
-    // Không tải nữa nếu đang tải hoặc đã hết dữ liệu
-    if (_isLoadingMore || !_hasMore) return;
+    // ---- KIỂM TRA ĐIỀU KIỆN MỚI ----
+    // Không tải nữa nếu đang tải, hết dữ liệu, HOẶC ĐANG LỌC
+    // (Vì API filter của bạn không hỗ trợ phân trang)
+    if (_isLoadingMore || !_hasMore || _isFiltered) return;
+    // ----------------------------------
 
     _isLoadingMore = true;
-    notifyListeners(); // Thông báo để UI có thể hiển thị loading...
+    notifyListeners();
 
     try {
-      _currentPage++; // Tăng số trang
+      _currentPage++;
+      // Luôn gọi getAllJobs vì chỉ fetchMore khi không lọc
       final response = await _jobService.getAllJobs(page: _currentPage, limit: 10);
 
-      _jobs.addAll(response.data); // Thêm dữ liệu mới vào danh sách
-      _hasMore = _currentPage < response.totalPages; // Cập nhật lại
+      _jobs.addAll(response.data);
+      _hasMore = _currentPage < response.totalPages;
     } catch (e) {
-      // Có thể xử lý lỗi tải thêm ở đây
       print('Error loading more jobs: $e');
-      _currentPage--; // Quay lại trang trước nếu lỗi
+      _currentPage--;
     } finally {
       _isLoadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  // ---- HÀM MỚI ĐỂ ÁP DỤNG BỘ LỌC ----
+  Future<void> applyFilter(FilterJobDto dto) async {
+    _state = HomeState.loading;
+    _jobs = [];
+    _currentFilter = dto; // Lưu lại filter
+    _isFiltered = true;   // Đặt trạng thái đang lọc
+    _hasMore = false;     // TẮT phân trang
+    _isLoadingMore = false;
+    _currentPage = 1;     // Reset
+    notifyListeners();
+
+    try {
+      final result = await _jobService.filterJobs(_currentFilter);
+      _jobs = result;
+      _state = HomeState.success;
+    } catch (e) {
+      _state = HomeState.error;
+      _errorMessage = e.toString();
+    } finally {
       notifyListeners();
     }
   }

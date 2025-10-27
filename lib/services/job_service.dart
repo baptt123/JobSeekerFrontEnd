@@ -2,6 +2,7 @@
 
 import 'package:dio/dio.dart';
 
+import '../dto/filter_job_dto.dart';
 import '../dto/pagination_job_response_dto.dart';
 import '../models/job-entity.dart';
 import '../utils/constant_api.dart';
@@ -127,4 +128,27 @@ class JobService {
       throw Exception('An unexpected error occurred: $e');
     }
   }
+  // HÀM MỚI ĐỂ GỌI API FILTER
+  Future<List<JobEntity>> filterJobs(FilterJobDto dto) async {
+    try {
+      // Dùng hàm toQueryParameters() để tạo params
+      final response = await _dio.get(
+        '/jobs/filter', // Endpoint backend của bạn
+        queryParameters: dto.toQueryParameters(),
+      );
+
+      // Backend của bạn trả về một List (hits.map(...))
+      if (response.data is List) {
+        return (response.data as List)
+            .map((item) => JobEntity.fromJson(item)) // Giả sử có JobEntity.fromJson
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('🔴 Error filtering jobs: $e');
+      // Ném lỗi để ViewModel có thể bắt
+      throw Exception('Failed to filter jobs');
+    }
+  }
 }
+
