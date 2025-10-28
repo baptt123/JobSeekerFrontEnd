@@ -12,6 +12,7 @@ import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/job_detail_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/login_chat_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/register_view_model.dart';
+import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/scan_pdf_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/search_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/zoom_view_model.dart';
@@ -39,6 +40,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ScanPdfViewModel()),
         ChangeNotifierProvider(create: (_) => CvGenerationViewModel()),
         ChangeNotifierProvider(create: (_) => JobDetailViewModel()),
+        ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
       ],
       child: MyApp(),
     ),

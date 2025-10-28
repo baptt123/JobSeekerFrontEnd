@@ -65,36 +65,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+// SỬA LẠI HÀM NÀY
   Widget _buildBody(BuildContext context, HomeViewModel vm) {
-    return SingleChildScrollView(
-      controller: _scrollController, // Gán controller
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: const [
-              HomeHeader(), // <-- Widget mới
-              Positioned(
-                top: 100,
-                left: 20,
-                right: 20,
-                child: SearchCard(), // <-- Widget mới
-              ),
-            ],
-          ),
-          const SizedBox(height: 120),
-          const SectionTitle('Available Jobs'), // <-- Widget mới
-          const SizedBox(height: 16),
-          JobsList(vm: vm), // <-- Widget mới (truyền vm)
-          // Hiển thị vòng quay khi tải thêm
-          if (vm.isLoadingMore)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
+    // 2. XÓA SingleChildScrollView
+    return Column( // 3. Column là widget gốc
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: const [
+            HomeHeader(),
+            Positioned(
+              top: 100,
+              left: 20,
+              right: 20,
+              child: SearchCard(),
             ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 120),
+        const SectionTitle('Available Jobs'),
+        const SizedBox(height: 16),
+
+        // 4. BỌC JobsList bằng Expanded
+        Expanded(
+          // 5. TRUYỀN ScrollController vào JobsList
+          child: JobsList(
+            scrollController: _scrollController,
+          ),
+        ),
+
+        // Hiển thị vòng quay khi tải thêm
+        if (vm.isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 

@@ -17,7 +17,7 @@ class ChangePasswordService {
     try {
       // TODO: Lấy token đã lưu của người dùng (ví dụ từ SharedPreferences hoặc FlutterSecureStorage)
       // final String? authToken = await const FlutterSecureStorage().read(key: 'accessToken');
-      final String? authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEwMDEsImVtYWlsIjoibmdvdGhhbmh0YW5AdGVzdDEyMy5jb20iLCJyb2xlIjoiQ0FORElEQVRFIiwiaWF0IjoxNzYwOTM0Mzk5LCJleHAiOjE3NjA5MzYxOTl9.XRbyJYPfQWU8VYszGJBgao2YuY2c-F9Ut6hjieFRQvE';
+      final String? authToken = await FlutterSecureStorage().read(key: 'accessToken');
       if (authToken == null) {
         throw Exception("Người dùng hiện tại không đuọc xác thực.");
       }

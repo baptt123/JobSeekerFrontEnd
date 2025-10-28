@@ -133,7 +133,7 @@ class JobService {
     try {
       // Dùng hàm toQueryParameters() để tạo params
       final response = await _dio.get(
-        '/jobs/filter', // Endpoint backend của bạn
+        '/filter', // Endpoint backend của bạn
         queryParameters: dto.toQueryParameters(),
       );
 
@@ -148,6 +148,46 @@ class JobService {
       print('🔴 Error filtering jobs: $e');
       // Ném lỗi để ViewModel có thể bắt
       throw Exception('Failed to filter jobs');
+    }
+  }
+// GET /saved-jobs: Lấy danh sách job đã lưu
+  Future<List<JobEntity>> getSavedJobs() async {
+    try {
+      // Sửa route: '/get-my-saved-jobs' -> '/saved-jobs'
+      // Giả sử bạn đã có Interceptor để thêm Auth Token
+      final response = await _dio.get('/get-my-saved-jobs');
+
+      final List<dynamic> data = response.data as List;
+      // Backend trả về danh sách JobEntity (đã join)
+      return data.map((json) => JobEntity.fromJson(json)).toList();
+    } catch (e) {
+      print('Lỗi [getSavedJobs]: $e');
+      throw Exception('Failed to load saved jobs');
+    }
+  }
+
+  // POST /saved-jobs: Lưu một job
+  Future<void> saveJob(int jobId) async {
+    try {
+      // Sửa route: '/create-save-job' -> '/saved-jobs'
+      await _dio.post(
+        '/create-save-job',
+        data: {'job_id': jobId}, // Backend DTO là { job_id: number }
+      );
+    } catch (e) {
+      print('Lỗi [saveJob]: $e');
+      throw Exception('Failed to save job');
+    }
+  }
+
+  // DELETE /saved-jobs/{job_id}: Xóa (soft-delete) một job
+  Future<void> unsaveJob(int jobId) async {
+    try {
+      // Sửa route: '/delete-job/$jobId' -> '/saved-jobs/$jobId'
+      await _dio.delete('/delete-job/$jobId');
+    } catch (e) {
+      print('Lỗi [unsaveJob]: $e');
+      throw Exception('Failed to unsave job');
     }
   }
 }

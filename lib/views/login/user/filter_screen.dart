@@ -24,7 +24,7 @@ class _FilterScreenState extends State<FilterScreen> {
   String? _selectedJobType;
 
   // Các lựa chọn cho job_type (từ DTO)
-  final List<String> _jobTypes = ['Full-time', 'Part-time', 'Intern', 'Remote'];
+  final List<String> _jobTypes = ['Full-time', 'Part-time', 'Internship', 'Contract','Freelance'];
 
   @override
   void initState() {

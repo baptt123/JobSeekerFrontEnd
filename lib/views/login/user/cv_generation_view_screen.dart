@@ -4,14 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../../view_models/user/cv_generation_view_model.dart';
 
-class CvGenerationView extends StatefulWidget {
-  const CvGenerationView({super.key});
+class CvGenerationViewScreen extends StatefulWidget {
+  const CvGenerationViewScreen({super.key});
 
   @override
-  State<CvGenerationView> createState() => _CvGenerationViewState();
+  State<CvGenerationViewScreen> createState() => _CvGenerationViewState();
 }
 
-class _CvGenerationViewState extends State<CvGenerationView> {
+class _CvGenerationViewState extends State<CvGenerationViewScreen> {
   final _promptController = TextEditingController();
 
   @override

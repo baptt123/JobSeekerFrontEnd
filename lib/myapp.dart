@@ -34,8 +34,8 @@
 //   }
 // }
 
-
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/utils/responsive_util.dart';
 import 'package:job_seeker_frontend/views/login/test/chat_view_screen.dart';
 import 'package:job_seeker_frontend/views/login/test/cv_generator_screen.dart';
 import 'package:job_seeker_frontend/views/login/test/login_view_chat_screen.dart';
@@ -46,6 +46,7 @@ import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart
 import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/zoom_create_meeting_screen.dart';
 
@@ -55,8 +56,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Job Seeker App',
       theme: ThemeData(primarySwatch: Colors.blue),
+
+      // 5. Thêm thuộc tính 'builder' ở đây
+      builder: (context, child) {
+        // Gọi hàm tiện ích của bạn
+        return ResponsiveUtil.buildResponsiveBreakpoints(child);
+      },
+
       home: MainMenu(),
+      // Giữ nguyên MainMenu của bạn
       routes: {
+        // Giữ nguyên routes của bạn
         '/login': (_) => LoginScreen(),
         '/zoom': (_) => ZoomCreateMeetingScreen(),
         '/register': (_) => RegisterScreen(),
@@ -68,7 +78,8 @@ class MyApp extends StatelessWidget {
         '/login_chat': (_) => LoginChatViewScreen(),
         '/cv_generator': (_) => InputCVGeneratorScreen(),
         '/scan_pdf': (_) => ScanPdfScreen(),
-        '/cv_gemini': (_) => CvGenerationView(),
+        '/cv_gemini': (_) => CvGenerationViewScreen(),
+        '/save_job': (_) => SavedJobsScreen(),
       },
     );
   }
@@ -87,8 +98,9 @@ class MainMenu extends StatelessWidget {
     {'title': 'Chat', 'route': '/chat'},
     {'title': 'Login Chat', 'route': '/login_chat'},
     {'title': 'CV Generator', 'route': '/cv_generator'},
-    {'title':' Test Scan PDF', 'route': '/scan_pdf'},
-    {'title':'Create CV from Gemini','route':'/cv_gemini'},
+    {'title': ' Test Scan PDF', 'route': '/scan_pdf'},
+    {'title': 'Create CV from Gemini', 'route': '/cv_gemini'},
+    {'title': 'Test Save Job', 'route': '/save_job'},
   ];
 
   @override
