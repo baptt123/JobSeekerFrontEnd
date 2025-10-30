@@ -75,7 +75,7 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
                 // Icon "save" trong ảnh
                 icon: const Icon(Icons.bookmark_border_outlined),
                 onPressed: () {
-                  // TODO: Xử lý logic save
+                  // TODO: Xử lý logic save (sẽ cần tích hợp giống apply)
                 },
               ),
               IconButton(
@@ -89,7 +89,8 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
           ),
           body: _buildBody(context, viewModel),
           // Nút "Apply this job" ở dưới cùng
-          bottomNavigationBar: _buildApplyButton(context, viewModel.job),
+          // ⭐️ SỬA: Truyền cả viewModel
+          bottomNavigationBar: _buildApplyButton(context, viewModel),
         );
       },
     );
@@ -130,28 +131,23 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
   Widget _buildHeader(BuildContext context, JobEntity job) {
     final companyName = job.company?.name ?? 'N/A';
 
+    // ⭐️ SỬA: Thêm logic lấy logo
+    final logoUrl = job.company?.logoUrl;
+    final bool isUrlValid =
+        logoUrl != null &&
+            logoUrl.isNotEmpty &&
+            (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
+
     return Column(
       children: [
-        // Placeholder cho logo công ty
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: (companyName.isNotEmpty && companyName != 'N/A')
-              ? Center(
-            child: Text(
-              companyName[0].toUpperCase(),
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          )
-              : Icon(Icons.business, color: Colors.grey.shade600, size: 40),
+        // ⭐️ SỬA: Hiển thị logo thật (CircleAvatar)
+        CircleAvatar(
+          radius: 40,
+          backgroundColor: Colors.grey[200],
+          backgroundImage: isUrlValid ? NetworkImage(logoUrl!) : null,
+          child: !isUrlValid
+              ? Icon(Icons.business, color: Colors.grey[600], size: 40)
+              : null,
         ),
         const SizedBox(height: 16),
         Text(
@@ -175,10 +171,6 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
     final currencyFormatter =
     NumberFormat.simpleCurrency(locale: 'en_US', decimalDigits: 0);
 
-    // Tính lương. Ví dụ: "$16k"
-    // Giả định salaryMax là USD và bạn muốn chia cho 1000
-    // Nếu salaryMax là 16000, nó sẽ hiển thị là $16,000.
-    // Ảnh của bạn ghi "$16k". Ta sẽ xử lý 1 chút
     final salary = (job.salaryMax != null)
         ? '\$${(job.salaryMax! / 1000).toStringAsFixed(0)}k /Mo'
         : (job.salaryMin != null)
@@ -319,8 +311,10 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
     );
   }
 
-  Widget _buildApplyButton(BuildContext context, JobEntity? job) {
-    if (job == null) return const SizedBox.shrink();
+  // ⭐️ SỬA: Thay JobEntity? job bằng JobDetailViewModel viewModel
+  Widget _buildApplyButton(BuildContext context, JobDetailViewModel viewModel) {
+    // ⭐️ SỬA: Check viewModel.job
+    if (viewModel.job == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(16.0).copyWith(
@@ -337,8 +331,12 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
         ],
       ),
       child: ElevatedButton(
-        onPressed: () {
-          // TODO: Xử lý logic apply
+        // ⭐️ SỬA: Thêm logic cho onPressed
+        onPressed: viewModel.isApplying
+            ? null // Vô hiệu hóa nút khi đang apply
+            : () {
+          // Gọi hàm từ view model
+          viewModel.applyForJob(context);
         },
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -347,9 +345,22 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: const Text(
+        // ⭐️ SỬA: Hiển thị loading hoặc text
+        child: viewModel.isApplying
+            ? const SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 3,
+          ),
+        )
+            : const Text(
           'Apply this job',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white),
         ),
       ),
     );

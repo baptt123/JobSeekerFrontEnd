@@ -1,6 +1,7 @@
 // lib/views/home/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../../view_models/user/home_view_model.dart';
@@ -49,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF9F9F9),
       appBar: HomeAppBar(
         onFilterPressed: () => _showFilterScreen(context),
-      ), // <-- Widget mới
+      ),
       body: Consumer<HomeViewModel>(
         builder: (context, vm, child) {
           if (vm.state == HomeState.loading && vm.jobs.isEmpty) {
@@ -58,44 +59,78 @@ class _HomeScreenState extends State<HomeScreen> {
           if (vm.state == HomeState.error && vm.jobs.isEmpty) {
             return Center(child: Text('Đã xảy ra lỗi: ${vm.errorMessage}'));
           }
-          return _buildBody(context, vm); // Giữ lại hàm _buildBody
+          return _buildBody(context, vm);
         },
       ),
-      bottomNavigationBar: const HomeBottomNav(), // <-- Widget mới
+      bottomNavigationBar: const HomeBottomNav(),
     );
   }
 
-// SỬA LẠI HÀM NÀY
+  // SỬA LẠI HÀM NÀY
   Widget _buildBody(BuildContext context, HomeViewModel vm) {
-    // 2. XÓA SingleChildScrollView
-    return Column( // 3. Column là widget gốc
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Stack(
           clipBehavior: Clip.none,
-          children: const [
-            HomeHeader(),
+          // <-- 2. XÓA CONST Ở ĐÂY
+          children: [
+            const HomeHeader(),
+            // <-- 3. XÓA CONST Ở ĐÂY
             Positioned(
               top: 100,
               left: 20,
               right: 20,
-              child: SearchCard(),
+              // <-- 4. BỌC SearchCard BẰNG GestureDetector
+              child: GestureDetector(
+                onTap: () {
+                  // <-- 5. ĐIỀU HƯỚNG ĐẾN SearchScreen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SearchScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  height: 56, // Chiều cao chuẩn cho thanh tìm kiếm
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4), // Đổ bóng xuống dưới
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: Colors.grey[600]),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Tìm kiếm công việc...', // Văn bản gợi ý
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 120),
         const SectionTitle('Available Jobs'),
         const SizedBox(height: 16),
-
-        // 4. BỌC JobsList bằng Expanded
         Expanded(
-          // 5. TRUYỀN ScrollController vào JobsList
           child: JobsList(
             scrollController: _scrollController,
           ),
         ),
-
-        // Hiển thị vòng quay khi tải thêm
         if (vm.isLoadingMore)
           const Padding(
             padding: EdgeInsets.all(16.0),
@@ -106,20 +141,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showFilterScreen(BuildContext context) {
-    // Lấy VM hiện tại
     final vm = context.read<HomeViewModel>();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      // Cho phép sheet cao
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        // Cung cấp HomeViewModel cho FilterScreen
-        // để nó có thể đọc filter cũ và gọi hàm apply/clear
         return ChangeNotifierProvider.value(
           value: vm,
           child: const FilterScreen(),

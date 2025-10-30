@@ -11,6 +11,7 @@ import 'package:job_seeker_frontend/view_models/user/forgot_password_view_model.
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/job_detail_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/login_chat_view_model.dart';
+import 'package:job_seeker_frontend/view_models/user/notification_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/register_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/scan_pdf_view_model.dart';
@@ -20,10 +21,26 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'myapp.dart';
 import 'view_models/user/login_view_model.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+// TOP-LEVEL FUNCTION: Bắt buộc phải là top-level (bên ngoài mọi class)
+// để xử lý thông báo khi app đang ở trạng thái terminated (background).
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Bạn có thể xử lý data message ở đây
+  // Ví dụ: lưu vào local storage
+  print("Handling a background message: ${message.messageId}");
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Khởi tạo Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Đăng ký background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // await dotenv.load(fileName: ".env");
   runApp(
     MultiProvider(
@@ -41,6 +58,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CvGenerationViewModel()),
         ChangeNotifierProvider(create: (_) => JobDetailViewModel()),
         ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
       ],
       child: MyApp(),
     ),
