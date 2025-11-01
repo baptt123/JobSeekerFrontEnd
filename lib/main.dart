@@ -5,12 +5,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 // ... các import khác của bạn ...
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/view_models/user/change_password_view_model.dart';
-import 'package:job_seeker_frontend/view_models/user/chat_view_model.dart';
+import 'package:job_seeker_frontend/view_models/user/conversation_list_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/cv_generation_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/forgot_password_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/job_detail_view_model.dart';
-import 'package:job_seeker_frontend/view_models/user/login_chat_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/notification_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/register_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
@@ -35,9 +34,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Khởi tạo Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Đăng ký background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -52,13 +49,12 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ForgotPasswordViewModel()),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
         ChangeNotifierProvider(create: (_) => SearchViewModel()),
-        ChangeNotifierProvider(create: (_) => ChatViewModel()),
-        ChangeNotifierProvider(create: (_) => LoginChatViewModel()),
         ChangeNotifierProvider(create: (_) => ScanPdfViewModel()),
         ChangeNotifierProvider(create: (_) => CvGenerationViewModel()),
         ChangeNotifierProvider(create: (_) => JobDetailViewModel()),
         ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
+        ChangeNotifierProvider(create: (_) => ConversationListViewModel()),
       ],
       child: MyApp(),
     ),

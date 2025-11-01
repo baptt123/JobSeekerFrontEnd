@@ -64,6 +64,7 @@ class LoginService {
   Future<void> _saveTokens(UserToken token) async {
     await _storage.write(key: 'accessToken', value: token.accessToken);
     await _storage.write(key: 'refreshToken', value: token.refreshToken);
+    await _storage.write(key: 'userId', value: token.userId.toString());
   }
 
   // --- Giữ nguyên hàm login bằng email/password ---

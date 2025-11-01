@@ -1,88 +1,87 @@
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/services/job_application_service.dart';
 
 import '../../models/job-entity.dart';
 import '../../services/job_service.dart';
 
 class JobDetailViewModel extends ChangeNotifier {
-  final JobService _jobService = JobService();
-
   JobEntity? _job;
   JobEntity? get job => _job;
-
+  JobApplicationService _jobApplicationService= JobApplicationService();
+  JobService _jobService = JobService();
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
-
   bool get hasError => _errorMessage != null;
 
-  // --- ⭐️ THÊM CÁC BIẾN TRẠNG THÁI MỚI ---
   bool _isApplying = false;
   bool get isApplying => _isApplying;
 
-  String? _applyError;
-  String? get applyError => _applyError;
-  // --- KẾT THÚC THÊM MỚI ---
+  // ⭐️ THÊM: Biến lưu trạng thái đã nộp đơn
+  // Chúng ta cần một biến riêng để có thể cập nhật nó ngay
+  // sau khi apply thành công, mà không cần gọi lại API
+  bool _isApplied = false;
+  bool get isApplied => _isApplied;
 
-  /// Hàm chính để gọi API lấy chi tiết công việc
-  Future<void> fetchJobDetail(String title) async {
+  // Giả sử bạn có ApiService
+  // final ApiService _apiService = ApiService();
+
+  Future<void> fetchJobDetail(String jobTitle) async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners(); // Thông báo cho UI "đang tải"
+    notifyListeners();
 
     try {
-      // Gọi service
-      _job = await _jobService.getJobDetail(title);
+      // API service sẽ fetch và parse JobEntity (đã có trường 'isApplied')
+      _job = await _jobService.getJobDetail(jobTitle);
+
+      // ⭐️ CẬP NHẬT: Lấy trạng thái 'isApplied' từ job vừa fetch
+      if (_job != null) {
+        _isApplied = _job!.isApplied;
+      }
+
     } catch (e) {
-      // Bắt lỗi
       _errorMessage = e.toString();
     } finally {
-      // Dù thành công hay thất bại, cũng tắt loading
       _isLoading = false;
-      notifyListeners(); // Cập nhật UI với data hoặc lỗi
+      notifyListeners();
     }
   }
 
-  // --- ⭐️ THÊM HÀM MỚI ĐỂ ỨNG TUYỂN ---
   Future<void> applyForJob(BuildContext context) async {
-    // Không cho nhấn nếu đang apply hoặc job chưa tải xong
-    if (_isApplying || _job == null) return;
+    // ⭐️ SỬA: Không cho apply nếu đang apply HOẶC đã apply rồi
+    if (_isApplying || _isApplied) return;
 
     _isApplying = true;
-    _applyError = null;
-    notifyListeners(); // Báo cho UI biết là "đang apply"
+    notifyListeners();
 
     try {
-      // Gọi service
-      await _jobService.applyForJob(_job!.jobId);
+      // Gọi API để nộp đơn
+      await _jobApplicationService.applyForJob(_job!.jobId);
 
-      // "xuất thông báo đã ứng tuyển"
+      // ⭐️ CẬP NHẬT: Nếu API thành công, đổi trạng thái
+      _isApplied = true;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ứng tuyển thành công!'),
+          content: Text('Nộp đơn thành công!'),
           backgroundColor: Colors.green,
         ),
       );
 
-      // Tắt loading và đóng trang chi tiết lại
-      _isApplying = false;
-      notifyListeners();
-      Navigator.of(context).pop();
-
     } catch (e) {
-      // Bắt lỗi từ service (ví dụ: "Đã ứng tuyển rồi", "Hết hạn")
-      _applyError = e.toString().replaceFirst('Exception: ', '');
-      _isApplying = false;
-      notifyListeners(); // Tắt loading
-
-      // Hiển thị lỗi cho người dùng
+      // Xử lý lỗi
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_applyError ?? 'Có lỗi xảy ra'),
+          content: Text('Nộp đơn thất bại: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      _isApplying = false;
+      notifyListeners();
     }
   }
 }

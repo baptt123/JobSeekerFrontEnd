@@ -312,9 +312,23 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
   }
 
   // ⭐️ SỬA: Thay JobEntity? job bằng JobDetailViewModel viewModel
+// ... (bên trong _JobDetailViewBodyState)
+
   Widget _buildApplyButton(BuildContext context, JobDetailViewModel viewModel) {
-    // ⭐️ SỬA: Check viewModel.job
     if (viewModel.job == null) return const SizedBox.shrink();
+
+    // ⭐️ LOGIC MỚI: Xác định trạng thái nút
+    final bool hasApplied = viewModel.isApplied; // Lấy từ VM
+    final bool isProcessing = viewModel.isApplying;
+
+    // Xác định text, màu sắc và trạng thái disable
+    final String buttonText = hasApplied ? 'Đã Nộp Đơn' : 'Apply this job';
+
+    final Color buttonColor = hasApplied
+        ? Colors.grey.shade600 // Màu xám nếu đã nộp
+        : const Color(0xFF00695C); // Màu teal
+
+    final bool isDisabled = isProcessing || hasApplied; // Disable nếu đang xử lý HOẶC đã nộp
 
     return Container(
       padding: const EdgeInsets.all(16.0).copyWith(
@@ -331,22 +345,24 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
         ],
       ),
       child: ElevatedButton(
-        // ⭐️ SỬA: Thêm logic cho onPressed
-        onPressed: viewModel.isApplying
-            ? null // Vô hiệu hóa nút khi đang apply
+        // ⭐️ SỬA: Dùng cờ isDisabled
+        onPressed: isDisabled
+            ? null // Vô hiệu hóa nút
             : () {
-          // Gọi hàm từ view model
           viewModel.applyForJob(context);
         },
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          backgroundColor: const Color(0xFF00695C), // Màu teal đậm
+          // ⭐️ SỬA: Dùng màu động
+          backgroundColor: buttonColor,
+          // ⭐️ THÊM: Màu khi bị vô hiệu hóa (sẽ tự động dùng màu xám)
+          disabledBackgroundColor: Colors.grey.shade400,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        // ⭐️ SỬA: Hiển thị loading hoặc text
-        child: viewModel.isApplying
+        // ⭐️ SỬA: Check cờ isProcessing
+        child: isProcessing
             ? const SizedBox(
           width: 24,
           height: 24,
@@ -355,8 +371,9 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
             strokeWidth: 3,
           ),
         )
-            : const Text(
-          'Apply this job',
+        // ⭐️ SỬA: Dùng text động
+            : Text(
+          buttonText,
           style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

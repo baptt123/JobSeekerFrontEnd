@@ -190,41 +190,7 @@ class JobService {
       throw Exception('Failed to unsave job');
     }
   }
-  // ⭐️ HÀM MỚI ĐỂ ỨNG TUYỂN
-  Future<void> applyForJob(int jobId) async {
-    // "userId ở đây tôi đang dùng mặc định là 1 để test á"
-    const int testUserId = 1;
 
-    try {
-      // Giả sử endpoint của bạn là /apply (sẽ thành /job/apply)
-      await _dio.post(
-        '/apply',
-        data: {
-          'job_id': jobId,
-          'user_id': testUserId, // Gửi User ID cứng = 1 để test
-        },
-      );
-    } on DioException catch (e) {
-      // Xử lý lỗi cụ thể từ backend (ví dụ: 400, 409, 404)
-      if (e.response != null) {
-        // Backend sẽ trả về lỗi dạng { "message": "Lỗi..." }
-        final errorMessage = e.response?.data?['message'] ?? 'Lỗi không xác định';
-
-        // "nếu rồi thì làm sao đó" -> Backend trả về lỗi (ví dụ: "Bạn đã ứng tuyển...")
-        // "còn hạn" -> Backend trả về lỗi (ví dụ: "Công việc đã hết hạn...")
-
-        // Ném lỗi này để ViewModel có thể bắt và hiển thị
-        throw Exception(errorMessage);
-      } else {
-        // Lỗi mạng, timeout...
-        print('Lỗi mạng [applyForJob]: $e');
-        throw Exception('Lỗi kết nối: ${e.message}');
-      }
-    } catch (e) {
-      print('Lỗi lạ [applyForJob]: $e');
-      throw Exception('Đã xảy ra lỗi không mong muốn');
-    }
-  }
 }
 
 

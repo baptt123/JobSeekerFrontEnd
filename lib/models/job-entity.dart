@@ -14,6 +14,8 @@ class JobEntity {
   final String? jobType;
   final DateTime createdAt;
   final CompanyEntity? company; // Giữ nguyên
+  // ⭐️ THÊM: Cờ mới từ backend
+  final bool isApplied;
 
   // --- THÊM TRƯỜNG MỚI (Từ DTO) ---
   final List<String> skills;
@@ -32,6 +34,7 @@ class JobEntity {
     required this.createdAt,
     this.company,
     this.skills = const [], // Mặc định là list rỗng (non-breaking)
+    required this.isApplied,
   });
 
   // --- FACTORY CŨ CỦA BẠN (Giữ nguyên) ---
@@ -56,6 +59,7 @@ class JobEntity {
           ? CompanyEntity.fromJson(json['company'])
           : null,
       // skills sẽ dùng giá trị mặc định là list rỗng
+      isApplied: json['isApplied'] ?? false, // Mặc định là false nếu API không trả về
     );
   }
 
@@ -78,16 +82,19 @@ class JobEntity {
     }
 
     // 3. Đọc skills
-    final skillsList = (json['skills'] as List<dynamic>?)
-        ?.map((e) => e.toString())
-        ?.toList() ??
+    final skillsList =
+        (json['skills'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            ?.toList() ??
         <String>[];
 
     // 4. Trả về JobEntity
     return JobEntity(
       jobId: json['job_id'] as int? ?? 0,
-      companyId: 0, // Không có, dùng tạm 0
-      postedBy: 0,  // Không có, dùng tạm 0
+      companyId: 0,
+      // Không có, dùng tạm 0
+      postedBy: 0,
+      // Không có, dùng tạm 0
       title: json['title'] as String? ?? 'N/A',
       description: json['description'] as String? ?? 'Không có mô tả',
       requirements: json['requirements'],
@@ -105,6 +112,7 @@ class JobEntity {
       company: companyInstance,
       // Gán skills
       skills: skillsList,
+      isApplied: json['isApplied'] ?? false, // Mặc định là false nếu API không trả về
     );
   }
 }

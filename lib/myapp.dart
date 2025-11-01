@@ -36,9 +36,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/utils/responsive_util.dart';
-import 'package:job_seeker_frontend/views/login/test/chat_view_screen.dart';
 import 'package:job_seeker_frontend/views/login/test/cv_generator_screen.dart';
-import 'package:job_seeker_frontend/views/login/test/login_view_chat_screen.dart';
 import 'package:job_seeker_frontend/views/login/test/scan_pdf_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/cv_generation_view_screen.dart';
@@ -76,7 +74,6 @@ class MyApp extends StatelessWidget {
         '/home': (_) => HomeScreen(),
         '/search': (_) => SearchScreen(),
         // '/chat': (_) => ChatViewScreen(),
-        '/login_chat': (_) => LoginChatViewScreen(),
         '/cv_generator': (_) => InputCVGeneratorScreen(),
         '/scan_pdf': (_) => ScanPdfScreen(),
         '/cv_gemini': (_) => CvGenerationViewScreen(),
@@ -97,8 +94,8 @@ class MainMenu extends StatelessWidget {
     {'title': 'Forgot Password', 'route': '/forgot_password'},
     {'title': 'Home', 'route': '/home'},
     {'title': 'Search', 'route': '/search'},
-    {'title': 'Chat', 'route': '/chat'},
-    {'title': 'Login Chat', 'route': '/login_chat'},
+    // {'title': 'Chat', 'route': '/chat'},
+    // {'title': 'Login Chat', 'route': '/login_chat'},
     {'title': 'CV Generator', 'route': '/cv_generator'},
     {'title': ' Test Scan PDF', 'route': '/scan_pdf'},
     {'title': 'Create CV from Gemini', 'route': '/cv_gemini'},
