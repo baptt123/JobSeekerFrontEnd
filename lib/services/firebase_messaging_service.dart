@@ -1,52 +1,51 @@
-import 'dart:async';
+// lib/services/firebase_messaging_service.dart
+// (Đã điều chỉnh đầy đủ)
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import '../dto/notification_dto.dart';
+// 1. Import service local notifications
+import 'package:job_seeker_frontend/services/local_notification_service.dart';
 
 class FirebaseMessagingService {
-  final _firebaseMessaging = FirebaseMessaging.instance;
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
-  // StreamController để ViewModel có thể lắng nghe thông báo mới
-  final StreamController<NotificationDto> _newMessageController =
-  StreamController.broadcast();
-  Stream<NotificationDto> get onNewMessage => _newMessageController.stream;
+  Future<void> initialize(Function(RemoteMessage) onMessageCallback) async {
+    await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
-  Future<void> initialize() async {
-    // 1. Yêu cầu quyền
-    await _firebaseMessaging.requestPermission();
-
-    // 2. Lấy FCM Token
-    final fcmToken = await _firebaseMessaging.getToken();
-    print('=================================');
-    print('FCM Token: $fcmToken');
-    print('=================================');
-    // TRONG THỰC TẾ: Bạn cần gửi token này về backend để lưu vào UserEntity
-
-    // 3. Lắng nghe thông báo khi app đang mở (Foreground)
+    // Xử lý khi ứng dụng đang mở (Foreground)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Got a message whilst in the foreground!');
       print('Message data: ${message.data}');
 
+      // 2. PHẦN ĐIỀU CHỈNH QUAN TRỌNG:
+      // Kiểm tra xem tin nhắn có phần notification không
       if (message.notification != null) {
-        print('Message also contained a notification: ${message.notification}');
+        // Nếu có, dùng LocalNotificationService để *hiển thị* nó
+        LocalNotificationService.showNotification(
+          title: message.notification!.title ?? 'Thông báo',
+          body: message.notification!.body ?? 'Bạn có tin nhắn mới.',
+          // (Tùy chọn) Bạn có thể truyền data vào payload
+          // payload: jsonEncode(message.data),
+        );
       }
 
-      // Chuyển RemoteMessage thành DTO và đẩy vào stream
-      _newMessageController.add(NotificationDto.fromRemoteMessage(message));
+      // 3. Gọi callback để ViewModel biết và refresh (vẫn giữ)
+      onMessageCallback(message);
     });
 
-    // 4. Lắng nghe khi người dùng click vào thông báo (khi app ở Background)
+    // Xử lý khi nhấn vào thông báo (khi app bị tắt hoặc ở background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('A new onMessageOpenedApp event was published!');
-      // TODO: Điều hướng người dùng đến màn hình chi tiết
-      // Ví dụ: navigatorKey.currentState.pushNamed('/notification_detail', arguments: message.data['id']);
-
-      // Ở đây chúng ta cũng có thể thêm nó vào danh sách
-      _newMessageController.add(NotificationDto.fromRemoteMessage(message));
+      // TODO: Điều hướng dựa trên message.data
     });
   }
 
-  void dispose() {
-    _newMessageController.close();
+  Future<String?> getDeviceToken() async {
+    String? token = await _firebaseMessaging.getToken();
+    print('Firebase FCM Token: $token');
+    return token;
   }
 }
