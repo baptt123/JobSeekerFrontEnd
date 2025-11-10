@@ -1,45 +1,11 @@
-// // lib/main.dart (hoặc my_app.dart)
-//
-// import 'package:flutter/material.dart';
-// import 'package:job_seeker_frontend/views/login/test/login_view_chat_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
-// import 'package:job_seeker_frontend/views/login/test/cv_generator_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
-//
-// // Đảm bảo đường dẫn này đúng với vị trí file RoomScreen của bạn
-// import 'package:job_seeker_frontend/views/login/user/zoom_create_meeting_screen.dart';
-//
-// Future<void> main() async {
-//   runApp(const MyApp());
-// }
-//
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       debugShowCheckedModeBanner: false,
-//       title: 'Chat App Demo',
-//       theme: ThemeData(
-//         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-//         useMaterial3: true,
-//       ),
-//       home: const InputScreen(),
-//     );
-//   }
-// }
+
 
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/utils/responsive_util.dart';
-import 'package:job_seeker_frontend/views/login/test/cv_generator_screen.dart';
 import 'package:job_seeker_frontend/views/login/test/scan_pdf_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/cv_generation_view_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/cv_template_selection_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
@@ -74,9 +40,9 @@ class MyApp extends StatelessWidget {
         '/home': (_) => HomeScreen(),
         '/search': (_) => SearchScreen(),
         // '/chat': (_) => ChatViewScreen(),
-        '/cv_generator': (_) => InputCVGeneratorScreen(),
+        // '/cv_generator': (_) => InputCVGeneratorScreen(),
         '/scan_pdf': (_) => ScanPdfScreen(),
-        '/cv_gemini': (_) => CvGenerationViewScreen(),
+        '/cv_generator': (_) => CvTemplateSelectionScreen(),
         '/save_job': (_) => SavedJobsScreen(),
         '/notification': (_) => NotificationScreen(),
       },

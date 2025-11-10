@@ -1,17 +1,24 @@
+//
+// 📄 [SỬA ĐỔI] baptt123/jobseekerfrontend/JobSeekerFrontEnd-develop/lib/view_models/user/cv_generation_view_model.dart
+//
 import 'dart:typed_data';
+// Sửa import 'dio' thành 'http' nếu bạn dùng package http
+import 'package:dio/src/response.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
-import '../../services/cv_service.dart'; // Để dùng ChangeNotifier
+// Đảm bảo đường dẫn này đúng
+import 'package:job_seeker_frontend/services/cv_service.dart';
+import 'package:job_seeker_frontend/dto/create_cv_dto.dart';
 
 // Các trạng thái của view
 enum CvGenerationState { initial, loading, success, error }
 
 class CvGenerationViewModel extends ChangeNotifier {
-  final CvGenerationService _cvService=CvGenerationService();
+  // Đảm bảo tên class Service khớp (CvGenerationService)
+  final CvGenerationService _cvService = CvGenerationService();
 
-  CvGenerationViewModel();
-
-  // Trạng thái (State)
+  // Trạng thái (State) cho chức năng Gemini
   CvGenerationState _state = CvGenerationState.initial;
   CvGenerationState get state => _state;
 
@@ -21,7 +28,7 @@ class CvGenerationViewModel extends ChangeNotifier {
   Uint8List? _pdfData;
   Uint8List? get pdfData => _pdfData;
 
-  // Hàm xử lý logic chính
+  // Hàm xử lý logic chính (Gemini)
   Future<void> generateCv(String prompt) async {
     // 1. Cập nhật trạng thái sang "Loading"
     _state = CvGenerationState.loading;
@@ -30,7 +37,7 @@ class CvGenerationViewModel extends ChangeNotifier {
     notifyListeners(); // Báo cho View "vẽ lại"
 
     try {
-      // 2. Gọi Service
+      // 2. Gọi Service (Service này giờ trả về Uint8List)
       final data = await _cvService.generateCv(prompt);
 
       // 3. Thành công
@@ -52,5 +59,29 @@ class CvGenerationViewModel extends ChangeNotifier {
     _errorMessage = null;
     _pdfData = null;
     notifyListeners();
+  }
+
+  /*
+  ================================================================
+  CHỨC NĂNG TẠO CV TỪ TEMPLATE (Giữ nguyên)
+  ================================================================
+  */
+
+  Future<String> previewCv(String templateId, CreateCvDto cvData) async {
+    try {
+      final htmlString = await _cvService.previewCv(templateId, cvData);
+      return htmlString;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  Future<Response> downloadCv(String templateId, CreateCvDto cvData) async {
+    try {
+      final response = await _cvService.downloadCv(templateId, cvData);
+      return response;
+    } catch (e) {
+      throw e;
+    }
   }
 }

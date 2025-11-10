@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ... các import khác của bạn ...
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/services/local_notification_service.dart';
 import 'package:job_seeker_frontend/view_models/user/change_password_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/conversation_list_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/cv_generation_view_model.dart';
@@ -35,7 +36,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Khởi tạo Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
+// Khởi tạo Local Notifications
+  await LocalNotificationService.initialize(); // <-- 2. Khởi tạo
   // Đăng ký background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   // await dotenv.load(fileName: ".env");
@@ -53,8 +55,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CvGenerationViewModel()),
         ChangeNotifierProvider(create: (_) => JobDetailViewModel()),
         ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
-        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ChangeNotifierProvider(create: (_) => ConversationListViewModel()),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
       ],
       child: MyApp(),
     ),

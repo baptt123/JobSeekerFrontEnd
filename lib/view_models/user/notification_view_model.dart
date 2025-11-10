@@ -1,95 +1,108 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+// lib/view_models/user/notification_view_model.dart
+// (Cập nhật file này)
 
-import '../../dto/notification_dto.dart';
-import '../../services/firebase_messaging_service.dart';
-import '../../services/notification_service.dart';
+import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/models/notification-entity.dart';
+import 'package:job_seeker_frontend/services/firebase_messaging_service.dart';
+import 'package:job_seeker_frontend/services/notification_service.dart';
+
+// Enum để quản lý các trạng thái
+enum NotificationState { Initial, Loading, Loaded, Error }
 
 class NotificationViewModel extends ChangeNotifier {
-  // Services
+  // Dependencies
   final NotificationService _notificationService = NotificationService();
-  final FirebaseMessagingService _firebaseMessagingService = FirebaseMessagingService();
+  final FirebaseMessagingService _fcmService = FirebaseMessagingService();
 
   // State
-  List<NotificationDto> _notifications = [];
-  Map<String, List<NotificationDto>> _groupedNotifications = {};
-  bool _isLoading = false;
+  NotificationState _state = NotificationState.Initial;
+  List<NotificationEntity> _notifications = [];
+  String _errorMessage = '';
+  String? _deviceToken;
 
-  // Getters cho View
-  Map<String, List<NotificationDto>> get groupedNotifications => _groupedNotifications;
-  bool get isLoading => _isLoading;
+  // Getters
+  NotificationState get state => _state;
+  List<NotificationEntity> get notifications => _notifications;
+  String get errorMessage => _errorMessage;
+  String? get deviceToken => _deviceToken;
 
-  // Constructor
+  // Giả sử bạn lấy user ID từ một service/provider khác
+  // Tạm thời hardcode
+  final int _currentUserId = 1;
+
   NotificationViewModel() {
-    _initialize();
+    initialize();
   }
 
-  void _initialize() async {
-    // 1. Khởi tạo FCM
-    await _firebaseMessagingService.initialize();
+  // Khởi tạo
+  Future<void> initialize() async {
+    await _getDeviceToken();
+    await fetchNotifications();
 
-    // 2. Lắng nghe thông báo mới từ FCM Service
-    _firebaseMessagingService.onNewMessage.listen(_onNewNotification);
-
-    // 3. Tải danh sách thông báo ban đầu
-    fetchNotifications();
+    // Lắng nghe các thông báo foreground
+    _fcmService.initialize((message) {
+      // Khi nhận được thông báo mới (foreground),
+      // tự động refresh lại danh sách
+      print("Foreground message received, refreshing list...");
+      fetchNotifications();
+    });
   }
 
-  // Khi có thông báo mới từ FCM
-  void _onNewNotification(NotificationDto notification) {
-    // Thêm vào đầu danh sách
-    _notifications.insert(0, notification);
-    _groupNotifications(); // Sắp xếp lại
-    notifyListeners();
-  }
-
+  // Lấy danh sách thông báo từ CSDL
   Future<void> fetchNotifications() async {
-    _isLoading = true;
-    notifyListeners();
-
+    _setState(NotificationState.Loading);
     try {
-      _notifications = await _notificationService.getNotifications();
-      _groupNotifications();
+      _notifications = await _notificationService.getNotificationsByUserId(_currentUserId);
+      _setState(NotificationState.Loaded);
     } catch (e) {
-      // Xử lý lỗi
-      print(e.toString());
+      _errorMessage = e.toString();
+      _setState(NotificationState.Error);
     }
+  }
 
-    _isLoading = false;
+  // Lấy FCM token
+  Future<void> _getDeviceToken() async {
+    _deviceToken = await _fcmService.getDeviceToken();
     notifyListeners();
   }
 
-  // Logic để nhóm thông báo theo "Today", "Yesterday"
-  void _groupNotifications() {
-    _groupedNotifications = {}; // Xóa nhóm cũ
+  // Gửi thông báo TEST
+  Future<bool> sendTestNotification(String title, String body) async {
+    if (_deviceToken == null) {
+      _errorMessage = "Không thể lấy được device token.";
+      _setState(NotificationState.Error);
+      return false;
+    }
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
+    _setState(NotificationState.Loading);
+    try {
+      bool success = await _notificationService.sendTestNotification(
+        token: _deviceToken!,
+        title: title,
+        body: body,
+        userId: _currentUserId, // Gửi userId để backend lưu vào CSDL
+      );
 
-    for (var notif in _notifications) {
-      final notifDate = DateTime(notif.createdAt.year, notif.createdAt.month, notif.createdAt.day);
-      String groupKey;
-
-      if (notifDate == today) {
-        groupKey = 'Today';
-      } else if (notifDate == yesterday) {
-        groupKey = 'Yesterday';
+      if (success) {
+        // Nếu gửi thành công, đợi 1 giây rồi refresh lại danh sách
+        // để thấy thông báo mới vừa được lưu vào CSDL
+        await Future.delayed(Duration(seconds: 1));
+        await fetchNotifications(); // Tải lại danh sách
       } else {
-        // Bạn có thể format ngày khác ở đây, ví dụ: 'October 26'
-        groupKey = DateFormat('MMMM d').format(notif.createdAt);
+        _errorMessage = "Gửi thông báo test thất bại.";
+        _setState(NotificationState.Error);
       }
-
-      if (_groupedNotifications[groupKey] == null) {
-        _groupedNotifications[groupKey] = [];
-      }
-      _groupedNotifications[groupKey]!.add(notif);
+      return success;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _setState(NotificationState.Error);
+      return false;
     }
   }
 
-  @override
-  void dispose() {
-    _firebaseMessagingService.dispose();
-    super.dispose();
+  // Helper quản lý state
+  void _setState(NotificationState newState) {
+    _state = newState;
+    notifyListeners();
   }
 }
