@@ -1,14 +1,18 @@
+// lib/views/login/user/job_detail_screen.dart
+// (File này được cập nhật dựa trên code của bạn)
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
+// ⭐️ Import cả model company
 
 // Đây là file view chính, nó sẽ khởi tạo ViewModel
-class JobDetailPage extends StatelessWidget {
+class JobDetailScreen extends StatelessWidget {
   final String jobTitle;
-  const JobDetailPage({super.key, required this.jobTitle});
+  const JobDetailScreen({super.key, required this.jobTitle});
 
   @override
   Widget build(BuildContext context) {
@@ -71,15 +75,21 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
               onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
+              // Icon "Save" (Giữ nguyên)
               IconButton(
-                // Icon "save" trong ảnh
-                icon: const Icon(Icons.bookmark_border_outlined),
-                onPressed: () {
-                  // TODO: Xử lý logic save (sẽ cần tích hợp giống apply)
+                icon: Icon(
+                  viewModel.isSaved
+                      ? Icons.bookmark
+                      : Icons.bookmark_border_outlined,
+                  color: viewModel.isSaved ? Colors.blue : Colors.grey,
+                ),
+                onPressed: viewModel.isSaving
+                    ? null
+                    : () {
+                  viewModel.toggleSaveJob(context);
                 },
               ),
               IconButton(
-                // Icon "upload/share" trong ảnh
                 icon: const Icon(Icons.ios_share_outlined),
                 onPressed: () {
                   // TODO: Xử lý logic share
@@ -88,8 +98,6 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
             ],
           ),
           body: _buildBody(context, viewModel),
-          // Nút "Apply this job" ở dưới cùng
-          // ⭐️ SỬA: Truyền cả viewModel
           bottomNavigationBar: _buildApplyButton(context, viewModel),
         );
       },
@@ -118,29 +126,28 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildHeader(context, job),
+          _buildHeader(context, job), // ⭐️ ĐÃ CẬP NHẬT
           const SizedBox(height: 24),
           _buildInfoTags(context, job),
           const SizedBox(height: 24),
-          _buildTabs(context, job),
+          _buildTabs(context, job), // ⭐️ ĐÃ CẬP NHẬT
         ],
       ),
     );
   }
 
+  // ⭐️⭐️⭐️ PHƯƠNG THỨC NÀY ĐÃ ĐƯỢC CẬP NHẬT ⭐️⭐️⭐️
   Widget _buildHeader(BuildContext context, JobEntity job) {
+    // Lấy thông tin công ty từ job.company (đã được eager load từ backend)
     final companyName = job.company?.name ?? 'N/A';
-
-    // ⭐️ SỬA: Thêm logic lấy logo
     final logoUrl = job.company?.logoUrl;
-    final bool isUrlValid =
-        logoUrl != null &&
-            logoUrl.isNotEmpty &&
-            (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
+
+    final bool isUrlValid = logoUrl != null &&
+        logoUrl.isNotEmpty &&
+        (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
 
     return Column(
       children: [
-        // ⭐️ SỬA: Hiển thị logo thật (CircleAvatar)
         CircleAvatar(
           radius: 40,
           backgroundColor: Colors.grey[200],
@@ -155,6 +162,7 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
@@ -168,6 +176,7 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
   }
 
   Widget _buildInfoTags(BuildContext context, JobEntity job) {
+    // (Giữ nguyên logic của bạn)
     final currencyFormatter =
     NumberFormat.simpleCurrency(locale: 'en_US', decimalDigits: 0);
 
@@ -213,15 +222,14 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
           ],
         ),
         const SizedBox(height: 16),
-        // Dùng IndexedStack hoặc TabBarView để hiển thị nội dung tab
         SizedBox(
-          // Chiều cao cho nội dung tab. Có thể dùng cách khác nếu nội dung động
-          height: 400, // TODO: Điều chỉnh chiều cao này
+          // ⭐️ Tăng chiều cao để chứa nội dung công ty
+          height: 600, // TODO: Điều chỉnh chiều cao này nếu cần
           child: TabBarView(
             controller: _tabController,
             children: [
               _buildDescriptionTab(context, job),
-              _buildCompanyTab(context, job),
+              _buildCompanyTab(context, job), // ⭐️ ĐÃ CẬP NHẬT
               _buildReviewsTab(context, job),
             ],
           ),
@@ -231,18 +239,17 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
   }
 
   Widget _buildDescriptionTab(BuildContext context, JobEntity job) {
-    // Tách các yêu cầu (requirements)
+    // (Giữ nguyên logic của bạn)
     final requirementsList = (job.requirements ?? '')
         .split('\n')
         .where((line) => line.trim().isNotEmpty)
-        .map((line) => line.trim().replaceFirst(RegExp(r'^-\s*'), '')) // Bỏ dấu "-"
+        .map((line) => line.trim().replaceFirst(RegExp(r'^-\s*'), ''))
         .toList();
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Phần mô tả (Read More)
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             alignment: Alignment.topCenter,
@@ -264,8 +271,6 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
             child: Text(_isDescriptionExpanded ? 'Read Less' : 'Read More'),
           ),
           const SizedBox(height: 24),
-
-          // Phần Responsibilities
           Text(
             'Responsibilities',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -279,8 +284,23 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
     );
   }
 
+  // ⭐️⭐️⭐️ PHƯƠNG THỨC NÀY ĐÃ ĐƯỢC CẬP NHẬT HOÀN TOÀN ⭐️⭐️⭐️
   Widget _buildCompanyTab(BuildContext context, JobEntity job) {
+    final company = job.company; // Lấy object company từ job
+
+    // Nếu không có thông tin công ty (dù đã eager load)
+    if (company == null) {
+      return const Center(
+        child: Text(
+          'Company information is not available.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    // Hiển thị thông tin công ty
     return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -292,13 +312,74 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
           ),
           const SizedBox(height: 16),
           Text(
-            job.company?.description ?? 'No company description available.',
+            company.description ?? 'No description provided.',
             style: TextStyle(color: Colors.grey.shade700, height: 1.5),
           ),
-          // Thêm các thông tin khác của công ty nếu muốn
-          // ví dụ: job.company?.website
+          const SizedBox(height: 24),
+          Divider(color: Colors.grey[200]),
+          const SizedBox(height: 24),
+
+          // Hiển thị Website và Địa chỉ
+          _buildCompanyInfoRow(
+            context,
+            icon: Icons.public,
+            title: 'Website',
+            content: company.website,
+          ),
+          const SizedBox(height: 16),
+          _buildCompanyInfoRow(
+            context,
+            icon: Icons.location_on_outlined,
+            title: 'Address',
+            content: company.address,
+          ),
         ],
       ),
+    );
+  }
+
+  // ⭐️⭐️⭐️ WIDGET PHỤ TRỢ MỚI CHO TAB CÔNG TY ⭐️⭐️⭐️
+  Widget _buildCompanyInfoRow(BuildContext context,
+      {required IconData icon, required String title, String? content}) {
+
+    final bool hasContent = content != null && content.isNotEmpty;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.grey.shade600, size: 20),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                hasContent ? content : 'Not provided',
+                style: TextStyle(
+                    color: hasContent ? Colors.grey.shade700 : Colors.grey.shade400,
+                    height: 1.4,
+                    fontStyle: hasContent ? FontStyle.normal : FontStyle.italic
+                ),
+                // Cân nhắc thêm:
+                // onTap: (title == 'Website' && hasContent) ? () {
+                //   _launchURL(content); // Cần một hàm để mở URL
+                // } : null,
+                // style: TextStyle(
+                //   color: (title == 'Website' && hasContent) ? Colors.blue : Colors.grey.shade700,
+                //   decoration: (title == 'Website' && hasContent) ? TextDecoration.underline : TextDecoration.none,
+                // ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -311,24 +392,16 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
     );
   }
 
-  // ⭐️ SỬA: Thay JobEntity? job bằng JobDetailViewModel viewModel
-// ... (bên trong _JobDetailViewBodyState)
-
   Widget _buildApplyButton(BuildContext context, JobDetailViewModel viewModel) {
+    // (Giữ nguyên logic của bạn)
     if (viewModel.job == null) return const SizedBox.shrink();
 
-    // ⭐️ LOGIC MỚI: Xác định trạng thái nút
-    final bool hasApplied = viewModel.isApplied; // Lấy từ VM
+    final bool hasApplied = viewModel.isApplied;
     final bool isProcessing = viewModel.isApplying;
-
-    // Xác định text, màu sắc và trạng thái disable
     final String buttonText = hasApplied ? 'Đã Nộp Đơn' : 'Apply this job';
-
-    final Color buttonColor = hasApplied
-        ? Colors.grey.shade600 // Màu xám nếu đã nộp
-        : const Color(0xFF00695C); // Màu teal
-
-    final bool isDisabled = isProcessing || hasApplied; // Disable nếu đang xử lý HOẶC đã nộp
+    final Color buttonColor =
+    hasApplied ? Colors.grey.shade600 : const Color(0xFF00695C);
+    final bool isDisabled = isProcessing || hasApplied;
 
     return Container(
       padding: const EdgeInsets.all(16.0).copyWith(
@@ -345,23 +418,19 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
         ],
       ),
       child: ElevatedButton(
-        // ⭐️ SỬA: Dùng cờ isDisabled
         onPressed: isDisabled
-            ? null // Vô hiệu hóa nút
+            ? null
             : () {
           viewModel.applyForJob(context);
         },
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          // ⭐️ SỬA: Dùng màu động
           backgroundColor: buttonColor,
-          // ⭐️ THÊM: Màu khi bị vô hiệu hóa (sẽ tự động dùng màu xám)
           disabledBackgroundColor: Colors.grey.shade400,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        // ⭐️ SỬA: Check cờ isProcessing
         child: isProcessing
             ? const SizedBox(
           width: 24,
@@ -371,10 +440,9 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
             strokeWidth: 3,
           ),
         )
-        // ⭐️ SỬA: Dùng text động
             : Text(
           buttonText,
-          style: TextStyle(
+          style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.white),
@@ -384,7 +452,7 @@ class _JobDetailViewBodyState extends State<_JobDetailViewBody>
   }
 }
 
-// Widget phụ trợ cho tag (Location, Salary, Type)
+// Widget phụ trợ (Giữ nguyên)
 class _InfoTag extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -415,7 +483,7 @@ class _InfoTag extends StatelessWidget {
   }
 }
 
-// Widget phụ trợ cho mục "Responsibilities"
+// Widget phụ trợ (Giữ nguyên)
 class _ResponsibilityItem extends StatelessWidget {
   final String text;
   const _ResponsibilityItem({required this.text});

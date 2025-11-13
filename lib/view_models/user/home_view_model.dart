@@ -1,3 +1,5 @@
+// lib/view_models/user/home_view_model.dart
+
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/models/job-entity.dart';
 import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
@@ -21,10 +23,13 @@ class HomeViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  // ✅ 1. THAY ĐỔI STATE TỪ INFINITE SCROLL SANG PAGINATION
   int _currentPage = 1;
-  bool _hasMore = true;
-  bool _isLoadingMore = false;
-  bool get isLoadingMore => _isLoadingMore;
+  int _totalPages = 1;
+
+  // ✅ 2. THÊM GETTER CHO VIEW SỬ DỤNG
+  int get currentPage => _currentPage;
+  int get totalPages => _totalPages;
 
   FilterJobDto _currentFilter = FilterJobDto();
   FilterJobDto get currentFilter => _currentFilter;
@@ -34,29 +39,24 @@ class HomeViewModel extends ChangeNotifier {
   // ++++ LOGIC LƯU JOB MỚI ++++
   Set<int> _savedJobIds = {};
 
-  // Hàm helper để UI kiểm tra
   bool isJobSaved(int jobId) {
     return _savedJobIds.contains(jobId);
   }
   // ++++++++++++++++++++++++++++
 
   HomeViewModel() {
-    // Đổi tên hàm khởi tạo để tải cả job và saved-list
     fetchInitialData();
   }
 
-  // ++ HÀM MỚI: Tải dữ liệu lần đầu ++
   Future<void> fetchInitialData() async {
     _state = HomeState.loading;
     _currentPage = 1;
     _jobs = [];
-    _hasMore = true;
     _isFiltered = false;
     _currentFilter = FilterJobDto();
     notifyListeners();
 
     try {
-      // Tải song song danh sách job và danh sách đã lưu
       final results = await Future.wait([
         _jobService.getAllJobs(page: _currentPage, limit: 10),
         _jobService.getSavedJobs(),
@@ -65,7 +65,10 @@ class HomeViewModel extends ChangeNotifier {
       // Xử lý kết quả getAllJobs
       final response = results[0] as PaginatedJobsResponse;
       _jobs = response.data;
-      _hasMore = _currentPage < response.totalPages;
+
+      // ✅ 3. LƯU STATE PHÂN TRANG TỪ API
+      _currentPage = response.page;
+      _totalPages = response.totalPages;
 
       // Xử lý kết quả getSavedJobs
       final savedJobs = results[1] as List<JobEntity>;
@@ -80,21 +83,22 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // Tải dữ liệu lần đầu HOẶC "XÓA BỘ LỌC"
+  // Tải lại trang 1 (hoặc "Xóa bộ lọc")
   Future<void> fetchJobs() async {
     _state = HomeState.loading;
-    _currentPage = 1;
+    _currentPage = 1; // Luôn reset về trang 1
     _jobs = [];
-    _hasMore = true;
     _isFiltered = false;
     _currentFilter = FilterJobDto();
     notifyListeners();
 
     try {
-      // Vẫn gọi lại hàm getAllJobs
       final response = await _jobService.getAllJobs(page: _currentPage, limit: 10);
       _jobs = response.data;
-      _hasMore = _currentPage < response.totalPages;
+
+      // ✅ 4. LƯU STATE PHÂN TRANG TỪ API
+      _currentPage = response.page;
+      _totalPages = response.totalPages;
 
       // ++ LUÔN CẬP NHẬT LẠI SAVED IDS KHI RESET ++
       final savedJobs = await _jobService.getSavedJobs();
@@ -109,34 +113,44 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // Tải thêm dữ liệu khi cuộn (Giữ nguyên logic của bạn)
-  Future<void> fetchMoreJobs() async {
-    if (_isLoadingMore || !_hasMore || _isFiltered) return;
-    _isLoadingMore = true;
-    notifyListeners();
+  // ✅ 6. HÀM MỚI ĐỂ CHUYỂN TRANG
+  Future<void> goToPage(int page) async {
+    // Không làm gì nếu đang tải hoặc chọn đúng trang hiện tại
+    if (_state == HomeState.loading || page == _currentPage) return;
+
+    // Không cho phép đi ra ngoài tổng số trang
+    if (page < 1 || page > _totalPages) return;
+
+    _state = HomeState.loading;
+    notifyListeners(); // Hiển thị loading overlay
+
     try {
-      _currentPage++;
-      final response = await _jobService.getAllJobs(page: _currentPage, limit: 10);
-      _jobs.addAll(response.data);
-      _hasMore = _currentPage < response.totalPages;
+      final response = await _jobService.getAllJobs(page: page, limit: 10);
+      _jobs = response.data; // Thay thế danh sách jobs cũ
+      _currentPage = response.page;
+      _totalPages = response.totalPages;
+      _state = HomeState.success;
     } catch (e) {
-      print('Error loading more jobs: $e');
-      _currentPage--;
+      _state = HomeState.error;
+      _errorMessage = e.toString();
+      // Nếu lỗi, state sẽ là error nhưng không đổi trang
+      _state = HomeState.error;
     } finally {
-      _isLoadingMore = false;
       notifyListeners();
     }
   }
 
-  // Áp dụng bộ lọc (Gần như giữ nguyên, chỉ không reset savedJobIds)
+  // Áp dụng bộ lọc
   Future<void> applyFilter(FilterJobDto dto) async {
     _state = HomeState.loading;
     _jobs = [];
     _currentFilter = dto;
     _isFiltered = true;
-    _hasMore = false;
-    _isLoadingMore = false;
+
+    // ✅ 7. RESET STATE PHÂN TRANG KHI LỌC
     _currentPage = 1;
+    _totalPages = 1;
+
     notifyListeners();
 
     try {
@@ -151,12 +165,13 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // ++ HÀM MỚI ĐỂ XỬ LÝ LƯU/XÓA ++
+  // ++ HÀM XỬ LÝ LƯU/XÓA (Giữ nguyên) ++
   Future<void> toggleSaveJob(
       JobEntity job,
       BuildContext context,
       SavedJobsViewModel savedJobsViewModel,
       ) async {
+    // ... (Giữ nguyên code của bạn) ...
     // Hàm tiện ích hiển thị snackbar
     void _showSnackbar(String message, bool isError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,9 +205,19 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  // ++ HÀM MỚI: Nhận đồng bộ từ SavedJobsViewModel ++
+  // ++ HÀM ĐỒNG BỘ ++
+
+  // Hàm này đã có trong file của bạn
   void removeSavedId(int jobId) {
     _savedJobIds.remove(jobId);
     notifyListeners();
   }
+
+  // ⭐️⭐️⭐️ HÀM CÒN THIẾU ĐÂY ⭐️⭐️⭐️
+  // (Được gọi bởi JobDetailViewModel để đồng bộ khi lưu job)
+  void addSavedId(int jobId) {
+    _savedJobIds.add(jobId);
+    notifyListeners();
+  }
+// ⭐️⭐️⭐️ KẾT THÚC HÀM MỚI ⭐️⭐️⭐️
 }

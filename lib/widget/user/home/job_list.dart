@@ -6,13 +6,16 @@ import '../../../view_models/user/save_job_view_model.dart';
 import '../../../views/login/user/job_detail_screen.dart';
 // import 'package:job_seeker_frontend/widget/user/suggest_job_card.dart';
 
-// ⭐️ 1. ĐỪNG QUÊN IMPORT TRANG DETAIL CỦA BẠN
-// (Hãy thay 'path/to' bằng đường dẫn đúng)
+// ⭐️ 1. IMPORT TRANG DETAIL
+// (Path của bạn đã đúng)
 
 class JobsList extends StatelessWidget {
-  final ScrollController scrollController;
+  // ✅ 1. XÓA ScrollController
+  // final ScrollController scrollController; (Không dùng nữa)
 
-  const JobsList({Key? key, required this.scrollController}) : super(key: key);
+  // ✅ 2. CẬP NHẬT CONSTRUCTOR
+  const JobsList({Key? key}) : super(key: key);
+  // const JobsList({Key? key, required this.scrollController}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -22,38 +25,28 @@ class JobsList extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: ListView.builder(
-        controller: scrollController,
+        // ✅ 3. XÓA CONTROLLER KHỎI LISTVIEW
+        // controller: scrollController, (Không dùng nữa)
         itemCount: homeViewModel.jobs.length,
         itemBuilder: (context, index) {
-          // (Bên trong hàm itemBuilder của ListView.builder)
-
           final job = homeViewModel.jobs[index];
           final bool isSaved = homeViewModel.isJobSaved(job.jobId);
 
-          // Lấy URL logo (dùng cấu trúc lồng nhau như cũ)
-          final logoUrl = job.company?.logoUrl; // <-- Vẫn hoạt động!
-
-          // Kiểm tra (vì logo_url có thể là 'Tạm thời chưa cập nhật')
-          final bool isUrlValid =
-              logoUrl != null &&
-                  logoUrl.isNotEmpty &&
-                  (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
+          final logoUrl = job.company?.logoUrl;
+          final bool isUrlValid = logoUrl != null &&
+              logoUrl.isNotEmpty &&
+              (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'));
 
           return ListTile(
             leading: CircleAvatar(
               backgroundColor: Colors.grey[200],
-              backgroundImage: isUrlValid ? NetworkImage(logoUrl!) : null,
+              backgroundImage: isUrlValid ? NetworkImage(logoUrl) : null,
               child: !isUrlValid
                   ? Icon(Icons.business, color: Colors.grey[600])
                   : null,
             ),
-
-            // --- 2. SỬA TITLE VÀ SUBTITLE ---
             title: Text(job.title),
             subtitle: Text(job.company?.name ?? 'Chưa xác định'),
-            // Sửa lại theo DTO mới
-
-            // --- 3. GIỮ NGUYÊN TRAILING (BOOKMARK) ---
             trailing: IconButton(
               icon: Icon(
                 isSaved ? Icons.bookmark : Icons.bookmark_border,
@@ -64,12 +57,21 @@ class JobsList extends StatelessWidget {
               },
             ),
 
-            // ⭐️ 2. THÊM HÀM ONTAP ĐỂ ĐIỀU HƯỚNG
+            // --- HÀM ONTAP ĐIỀU HƯỚNG ---
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => JobDetailPage(
-                    // Truyền title của job này qua
+                  builder: (context) => JobDetailScreen(
+                    // ⭐️ Gợi ý: Bạn nên truyền `jobId` hoặc toàn bộ object `job`
+                    // thay vì chỉ `jobTitle`.
+                    //
+                    // Ví dụ 1: Truyền ID
+                    // jobId: job.jobId,
+                    //
+                    // Ví dụ 2: Truyền cả object
+                    // job: job,
+                    //
+                    // (Giữ nguyên code của bạn nếu JobDetailPage chỉ cần title)
                     jobTitle: job.title,
                   ),
                 ),

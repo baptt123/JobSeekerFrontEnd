@@ -24,7 +24,7 @@ class SuggestedJobCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             // Truyền 'job.title' sang trang chi tiết
-            builder: (context) => JobDetailPage(jobTitle: job.title),
+            builder: (context) => JobDetailScreen(jobTitle: job.title),
           ),
         );
       },
