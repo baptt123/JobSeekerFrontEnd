@@ -65,6 +65,7 @@ dependencies:
   image_picker: ^1.2.0
   firebase_analytics: ^11.6.0
   flutter_local_notifications: ^17.2.4
+  cached_network_image: ^3.2.0 # Để hiển thị và cache ảnh avatar
 dev_dependencies:
   flutter_test:
     sdk: flutter

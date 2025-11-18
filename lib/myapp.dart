@@ -10,6 +10,7 @@ import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart
 import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/notification_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/cv_generator': (_) => CvTemplateSelectionScreen(),
         '/save_job': (_) => SavedJobsScreen(),
         '/notification': (_) => NotificationScreen(),
+        '/profile':(_)=>ProfileScreen(),
       },
     );
   }
@@ -67,6 +69,7 @@ class MainMenu extends StatelessWidget {
     {'title': 'Create CV from Gemini', 'route': '/cv_gemini'},
     {'title': 'Test Save Job', 'route': '/save_job'},
     {'title': 'Test Notification', 'route': '/notification'},
+    {'title':'Test Profile','route':'/profile'},
   ];
 
   @override

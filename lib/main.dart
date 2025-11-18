@@ -16,6 +16,7 @@ import 'package:job_seeker_frontend/view_models/user/register_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/scan_pdf_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/search_view_model.dart';
+import 'package:job_seeker_frontend/view_models/user/user_profile_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/zoom_view_model.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -36,7 +37,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Khởi tạo Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-// Khởi tạo Local Notifications
+  // Khởi tạo Local Notifications
   await LocalNotificationService.initialize(); // <-- 2. Khởi tạo
   // Đăng ký background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -57,6 +58,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
         ChangeNotifierProvider(create: (_) => ConversationListViewModel()),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
+        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
       ],
       child: MyApp(),
     ),

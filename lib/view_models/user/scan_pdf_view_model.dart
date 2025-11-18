@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'; // Để dùng BuildContext nếu cần lấy UserProvider
 
 import '../../services/pdf_scan_service.dart';
 
@@ -16,37 +17,39 @@ class ScanPdfViewModel extends ChangeNotifier {
   String get extractedText => _extractedText;
   String get fileName => _fileName;
 
-  // --- Logic nghiệp vụ (do View gọi) ---
-  Future<void> pickAndScanPdf() async {
+  // --- Logic nghiệp vụ ---
+  Future<void> pickAndScanPdf(BuildContext context) async {
     _setLoading(true);
     _extractedText = "";
     _fileName = "";
 
     try {
-      // 1. Chọn file
+      // 1. Giả lập lấy User ID hiện tại
+      // TODO: Thay thế dòng này bằng Provider.of<UserViewModel>(context, listen: false).user.id
+      const int currentUserId = 1;
+
+      // 2. Chọn file
       final File? file = await _pdfScanService.pickPdfFile();
 
-      // Nếu người dùng không chọn file
       if (file == null) {
-        _setLoading(false);
+        _setLoading(false); // Người dùng hủy chọn
         return;
       }
 
       _fileName = file.path.split('/').last;
-      notifyListeners(); // Cập nhật tên file lên UI ngay
+      notifyListeners(); // Cập nhật UI để hiện tên file và vòng quay loading
 
-      // 2. Scan file
-      _extractedText = await _pdfScanService.extractTextFromPdf(file);
+      // 3. Scan file (Gửi kèm userId)
+      _extractedText = await _pdfScanService.extractTextFromPdf(file, currentUserId);
 
     } catch (e) {
-      _extractedText = "Đã xảy ra lỗi: ${e.toString()}";
+      _extractedText = "❌ Đã xảy ra lỗi: ${e.toString()}";
     } finally {
-      // 3. Cập nhật UI
       _setLoading(false);
     }
   }
 
-  // Hàm private để quản lý trạng thái loading và thông báo cho View
+  // Hàm private update loading
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();

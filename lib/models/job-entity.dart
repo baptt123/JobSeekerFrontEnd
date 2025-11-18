@@ -15,7 +15,7 @@ class JobEntity {
   final bool isApplied;
   final bool isSaved;
   final CompanyEntity? company;
-
+  final DateTime? deadline; // ⭐️ THÊM field này
   // ⭐️ THÊM LẠI TRƯỜNG SKILLS (Vì fromFlatJson cần nó)
   final List<String> skills;
 
@@ -32,6 +32,7 @@ class JobEntity {
     required this.isSaved,
     this.company,
     this.skills = const [], // ⭐️ Khởi tạo mặc định
+    this.deadline,
   });
 
   // --- FACTORY CŨ (Để đọc JSON lồng nhau từ API chi tiết) ---
@@ -44,14 +45,17 @@ class JobEntity {
     }
 
     // ⭐️ Xử lý skills (nếu có)
-    final skillsList = (json['skills'] as List<dynamic>?)
-        ?.map((e) => e.toString())
-        ?.toList() ??
+    final skillsList =
+        (json['skills'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            ?.toList() ??
         <String>[];
 
     return JobEntity(
-      jobId: json['job_id'] as int? ?? 0, // An toàn hơn
-      title: json['title'] as String? ?? 'N/A', // An toàn hơn
+      jobId: json['job_id'] as int? ?? 0,
+      // An toàn hơn
+      title: json['title'] as String? ?? 'N/A',
+      // An toàn hơn
       description: json['description'] as String?,
       requirements: json['requirements'] as String?,
       salaryMin: parseDoubleSafe(json['salary_min']),
@@ -60,7 +64,9 @@ class JobEntity {
       jobType: json['job_type'] as String?,
       isApplied: json['isApplied'] as bool? ?? false,
       isSaved: json['isSaved'] as bool? ?? false,
-
+      deadline: json['deadline'] != null
+          ? DateTime.parse(json['deadline'])
+          : null,
       // Xử lý object company lồng nhau
       company: json['company'] != null && json['company'] is Map
           ? CompanyEntity.fromJson(json['company'] as Map<String, dynamic>)
@@ -83,6 +89,9 @@ class JobEntity {
     final companyName = json['company_name'] as String?;
     final logoUrl = json['logo_url'] as String?;
     final int companyId = json['company_id'] as int? ?? 0;
+
+
+    deadline:json['deadline'] != null ? DateTime.parse(json['deadline']) : null;
     // 2. "Tái tạo" (re-hydrate) đối tượng CompanyEntity
     CompanyEntity? companyInstance;
     if (companyName != null) {
@@ -95,13 +104,12 @@ class JobEntity {
         // Các trường khác sẽ là null hoặc giá trị mặc định...
       );
     }
-
     // 3. Đọc skills
     final skillsList =
         (json['skills'] as List<dynamic>?)
             ?.map((e) => e.toString())
             ?.toList() ??
-            <String>[];
+        <String>[];
 
     // 4. Trả về JobEntity
     return JobEntity(
@@ -113,7 +121,9 @@ class JobEntity {
       jobType: json['job_type'] as String?,
       salaryMin: parseDoubleSafe(json['salary_min']),
       salaryMax: parseDoubleSafe(json['salary_max']),
-
+      deadline: json['deadline'] != null
+          ? DateTime.parse(json['deadline'])
+          : null,
       // Gán đối tượng company vừa "tái tạo"
       company: companyInstance,
 

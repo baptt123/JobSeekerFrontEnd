@@ -1,69 +1,80 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdfx/pdfx.dart';
+import 'package:job_seeker_frontend/utils/constant_api.dart'; // Đảm bảo import đúng file config của bạn
 
 class PdfScanService {
-  /// Yêu cầu người dùng chọn một file PDF
+  // ✅ Endpoint Backend
+  final String _backendUrl = '${ConstantAPI.baseUrl}/cv/scan-pdf';
+
+  final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 30), // Tăng timeout vì xử lý AI + Cloudinary lâu
+    receiveTimeout: const Duration(seconds: 60),
+    sendTimeout: const Duration(seconds: 60),
+    headers: {'Accept': 'application/json'},
+  ));
+
+  /// 1️⃣ Chọn file PDF từ thiết bị
   Future<File?> pickPdfFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf'],
-    );
-
-    if (result == null) {
-      return null;
-    }
-    return File(result.files.single.path!);
-  }
-
-  /// Trích xuất văn bản từ file PDF
-  Future<String> extractTextFromPdf(File pdfFile) async {
-    final pdfDoc = await PdfDocument.openFile(pdfFile.path);
-    final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-    final buffer = StringBuffer();
-
     try {
-      // Lặp qua từng trang, render ảnh và scan
-      for (int i = 1; i <= pdfDoc.pagesCount; i++) {
-        final page = await pdfDoc.getPage(i);
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
 
-        final imageFile = await _renderPageAsImage(page, i);
-        if (imageFile == null) continue;
-
-        final inputImage = InputImage.fromFile(imageFile);
-        final recognizedText = await textRecognizer.processImage(inputImage);
-        buffer.writeln(recognizedText.text);
-
-        await page.close();
-        await imageFile.delete(); // Xóa file ảnh tạm sau khi xử lý
+      if (result != null && result.files.single.path != null) {
+        return File(result.files.single.path!);
       }
     } catch (e) {
-      // Xử lý lỗi nếu có
-      rethrow; // Ném lỗi ra để ViewModel bắt
-    } finally {
-      // Đảm bảo đóng các tài nguyên
-      await textRecognizer.close();
-      await pdfDoc.close();
+      print("Lỗi khi chọn file: $e");
     }
-
-    return buffer.toString();
+    return null;
   }
 
-  /// Hàm hỗ trợ: render 1 trang PDF thành file ảnh tạm
-  Future<File?> _renderPageAsImage(PdfPage page, int index) async {
-    final image = await page.render(
-      width: page.width * 2, // Tăng chất lượng ảnh để nhận diện tốt hơn
-      height: page.height * 2,
-      format: PdfPageImageFormat.png,
-    );
+  /// 2️⃣ Gửi file PDF + UserID lên backend
+  Future<String> extractTextFromPdf(File file, int userId) async {
+    try {
+      print("🚀 Đang gửi file ${file.path.split('/').last} (User: $userId) lên $_backendUrl...");
 
-    if (image == null) return null;
+      // Tạo FormData chứa File và UserID
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: file.path.split('/').last,
+          contentType: DioMediaType('application', 'pdf'),
+        ),
+        // ⭐️ QUAN TRỌNG: Backend yêu cầu user_id
+        'user_id': userId.toString(),
+      });
 
-    final tempDir = await getTemporaryDirectory();
-    final imageFile = File("${tempDir.path}/pdf_page_${index}_${DateTime.now().millisecondsSinceEpoch}.png");
-    await imageFile.writeAsBytes(image.bytes);
-    return imageFile;
+      final response = await _dio.post(
+        _backendUrl,
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
+
+      print("📦 Status code: ${response.statusCode}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        // ⭐️ Backend trả về key là 'extracted_text' (snake_case)
+        return data['extracted_text'] ?? 'Không có nội dung văn bản được trích xuất.';
+      } else {
+        throw Exception('Lỗi máy chủ: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMsg = e.response?.data is Map
+            ? e.response?.data['message'] ?? 'Lỗi không xác định từ server'
+            : e.response?.data.toString();
+        throw Exception('Lỗi Backend: $errorMsg');
+      } else {
+        throw Exception('Lỗi kết nối: ${e.message}');
+      }
+    } catch (e) {
+      throw Exception('Lỗi xử lý: $e');
+    }
   }
 }
