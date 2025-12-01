@@ -5,33 +5,44 @@ import '../models/user-token-entity.dart';
 import '../utils/constant_api.dart'; // Giữ nguyên model của bạn
 
 class LoginService {
-  // THAY ĐỔI ĐỊA CHỈ IP NẾU CẦN
-  final Dio _dio = Dio(BaseOptions(baseUrl: ConstantAPI.baseUrl+'/auth'));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: ConstantAPI.baseUrl + '/auth',
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ),
+  );
+
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // Sửa tên constructor cho đúng với tên class
   LoginService() {
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final accessToken = await _storage.read(key: 'accessToken');
-        if (accessToken != null) {
-          options.headers['Authorization'] = 'Bearer $accessToken';
-        }
-        handler.next(options);
-      },
-      onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          final isRefreshed = await _handleTokenRefresh();
-          if (isRefreshed) {
-            final retryRequest = await _retryRequest(error.requestOptions);
-            return handler.resolve(retryRequest);
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Luôn đính kèm AccessToken nếu có
+          final accessToken = await _storage.read(key: 'accessToken');
+          if (accessToken != null) {
+            options.headers['Authorization'] = 'Bearer $accessToken';
           }
-        }
-        handler.next(error);
-      },
-    ));
+          return handler.next(options);
+        },
+        onError: (error, handler) async {
+          // Nếu AccessToken hết hạn (401), thử refresh
+          if (error.response?.statusCode == 401) {
+            final newAccessToken = await _handleTokenRefresh();
+            if (newAccessToken != null) {
+              // Update token mới vào header và gọi lại request cũ
+              error.requestOptions.headers['Authorization'] =
+                  'Bearer $newAccessToken';
+              return handler.resolve(await _retryRequest(error.requestOptions));
+            }
+          }
+          return handler.next(error);
+        },
+      ),
+    );
   }
-  // --- Giữ nguyên các hàm: _retryRequest, _handleTokenRefresh, _saveTokens ---
+
   Future<Response<dynamic>> _retryRequest(RequestOptions requestOptions) async {
     final options = Options(
       method: requestOptions.method,
@@ -45,20 +56,26 @@ class LoginService {
     );
   }
 
-  Future<bool> _handleTokenRefresh() async {
+  // Helper: Refresh Token ngầm khi đang sử dụng app
+  Future<String?> _handleTokenRefresh() async {
     final refreshToken = await _storage.read(key: 'refreshToken');
-    if (refreshToken == null) return false;
+    if (refreshToken == null) return null;
 
     try {
-      final response = await _dio.post('/refresh', data: {'refreshToken': refreshToken});
+      final response = await _dio.post(
+        '/refresh',
+        data: {'refreshToken': refreshToken},
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final token = UserToken.fromJson(response.data);
-        await _saveTokens(token);
-        return true;
+        final tokenData = UserToken.fromJson(response.data);
+        await _saveTokens(tokenData);
+        return tokenData.accessToken;
       }
-    } catch (_) {}
-    await logout();
-    return false;
+    } catch (_) {
+      // Nếu refresh thất bại (hết hạn hẳn), logout
+      await logout();
+    }
+    return null;
   }
 
   Future<void> _saveTokens(UserToken token) async {
@@ -67,7 +84,7 @@ class LoginService {
     await _storage.write(key: 'userId', value: token.userId.toString());
   }
 
-  // --- Giữ nguyên hàm login bằng email/password ---
+  // 1. LOGIN (Standard)
   Future<UserToken?> login(String email, String password) async {
     try {
       final response = await _dio.post(
@@ -76,14 +93,54 @@ class LoginService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // Parse JSON -> UserToken (bao gồm check user object)
         final token = UserToken.fromJson(response.data);
+        // Lưu vào Storage
         await _saveTokens(token);
         return token;
       }
       return null;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Đăng nhập thất bại');
+      // Ném lỗi rõ ràng để ViewModel hiển thị Toast
+      final msg = e.response?.data['message'] ?? 'Đăng nhập thất bại';
+      throw Exception(msg);
     }
+  }
+
+  // 2. AUTO LOGIN (Chạy khi mở app)
+  Future<UserToken?> tryAutoLogin() async {
+    // Bước 1: Lấy Refresh Token từ Storage
+    final refreshToken = await _storage.read(key: 'refreshToken');
+    if (refreshToken == null) {
+      print("Không tìm thấy Refresh Token trong máy.");
+      return null;
+    }
+
+    try {
+      // Bước 2: Gửi lên Server để kiểm tra và lấy token mới
+      print("Đang kiểm tra Refresh Token với Server...");
+      final response = await _dio.post(
+        '/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Bước 3: Nếu hợp lệ, lưu token mới và trả về object User
+        final token = UserToken.fromJson(response.data);
+        await _saveTokens(token);
+        print("Auto Login thành công cho User ID: ${token.userId}");
+        return token;
+      }
+    } catch (e) {
+      print("Auto Login thất bại (Token hết hạn hoặc lỗi): $e");
+      // Bước 4: Nếu lỗi, xóa sạch token cũ để tránh loop
+      await logout();
+    }
+    return null;
+  }
+
+  Future<void> logout() async {
+    await _storage.deleteAll();
   }
 
   // --- THÊM MỚI: Hàm đăng nhập bằng Firebase ID Token ---
@@ -93,37 +150,12 @@ class LoginService {
     try {
       final response = await _dio.get(
         '/profile',
-        options: Options(
-          headers: {'Authorization': 'Bearer $idToken'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $idToken'}),
       );
       return response.data;
     } on DioException catch (e) {
       print("Lỗi khi gọi API profile: ${e.response?.data}");
       throw Exception(e.response?.data['message'] ?? 'Không thể lấy profile');
     }
-  }
-
-
-
-  Future<UserToken?> tryAutoLogin() async {
-    final refreshToken = await _storage.read(key: 'refreshToken');
-    if (refreshToken == null) return null;
-    try {
-      final response = await _dio.post('/refresh', data: {'refreshToken': refreshToken});
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final token = UserToken.fromJson(response.data);
-        await _saveTokens(token);
-        return token;
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> logout() async {
-    await _storage.deleteAll();
-    // Thêm đăng xuất khỏi Firebase nếu cần, nhưng thường ViewModel sẽ gọi riêng
   }
 }

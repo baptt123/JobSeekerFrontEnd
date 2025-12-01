@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,7 +11,8 @@ class FirebaseLoginService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final Dio _dio = Dio(BaseOptions(baseUrl: ConstantAPI.baseUrl + '/auth'));
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
+  final FirebaseMessaging _firebaseMessaging =
+      FirebaseMessaging.instance; // [THÊM]
   User? getCurrentUser() {
     return _auth.currentUser;
   }
@@ -74,38 +76,54 @@ class FirebaseLoginService {
     await _auth.signOut();
   }
 
-  /// Đăng nhập bằng Google Firebase Token
+  /// [SỬA ĐỔI] Đăng nhập backend kèm Device Token
   Future<UserToken> loginWithGoogleToken(String firebaseToken) async {
     const String path = '/firebase-login';
 
     try {
+      // 1. [THÊM MỚI] Lấy Device Token (FCM Token)
+      // Lưu ý: Cần xin quyền thông báo ở main.dart hoặc lúc khởi chạy app trước đó
+      String? deviceToken;
+      try {
+        deviceToken = await _firebaseMessaging.getToken();
+        print("📲 FCM Device Token: $deviceToken");
+      } catch (e) {
+        print("⚠️ Không lấy được Device Token: $e");
+      }
+
+      // 2. Gọi API NestJS
       final response = await _dio.post(
         path,
         options: Options(
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer $firebaseToken',
+            'Authorization': 'Bearer $firebaseToken', // Gửi ID Token ở Header
           },
         ),
+        data: {
+          // [THÊM MỚI] Gửi Device Token ở Body
+          "deviceToken": deviceToken,
+        },
       );
 
-      // 3. Parse dữ liệu giống như style của bạn
       final userToken = UserToken.fromJson(response.data);
 
-      // 4. Lưu vào FlutterSecureStorage (LƯU Ý: chỉ lưu String)
       await _storage.write(key: 'userToken', value: userToken.accessToken);
       await _storage.write(key: 'userId', value: userToken.userId.toString());
+      // Lưu refresh token để dùng sau này nếu cần
+      if (response.data['refreshToken'] != null) {
+        await _storage.write(
+          key: 'refreshToken',
+          value: response.data['refreshToken'],
+        );
+      }
 
       return userToken;
     } on DioException catch (e) {
-      // 5. Xử lý lỗi theo style của bạn: log và "rethrow"
-      // Lớp gọi (ViewModel/Bloc) sẽ chịu trách nhiệm
-      // bắt lỗi này và hiển thị thông báo cho người dùng.
       print('❌ Error logging in with Google: $e');
       rethrow;
     } catch (e) {
-      // Bắt các lỗi khác (ví dụ: lỗi parsing .fromJson)
-      print('❌ Error parsing token or saving to storage: $e');
+      print('❌ Error parsing token: $e');
       rethrow;
     }
   }
