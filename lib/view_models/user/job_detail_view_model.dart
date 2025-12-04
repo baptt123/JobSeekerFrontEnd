@@ -36,17 +36,20 @@ class JobDetailViewModel extends ChangeNotifier {
   bool get isSaved => _isSaved;
   // --- KẾT THÚC LOGIC MỚI ---
 
+  // Trong JobDetailViewModel
   Future<void> fetchJobDetail(String jobTitle) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      // Service bây giờ đã tự động gắn Token (nếu có)
+      // nên Backend sẽ trả về đúng trạng thái isSaved / isApplied
       _job = await _jobService.getJobDetail(jobTitle);
 
       if (_job != null) {
         _isApplied = _job!.isApplied;
-        _isSaved = _job!.isSaved; // ⭐️ CẬP NHẬT: Lấy 'isSaved' từ job
+        _isSaved = _job!.isSaved;
       }
     } catch (e) {
       _errorMessage = e.toString();

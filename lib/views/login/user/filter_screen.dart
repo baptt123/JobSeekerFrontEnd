@@ -1,10 +1,7 @@
-// lib/views/home/filter_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
-
 import '../../../dto/filter_job_dto.dart';
 
 class FilterScreen extends StatefulWidget {
@@ -15,28 +12,35 @@ class FilterScreen extends StatefulWidget {
 }
 
 class _FilterScreenState extends State<FilterScreen> {
-  // Controllers cho các trường text
+  // Controllers
   late TextEditingController _locationController;
   late TextEditingController _minSalaryController;
   late TextEditingController _maxSalaryController;
 
-  // Biến cho radio button
+  // Biến chọn Job Type
   String? _selectedJobType;
-
-  // Các lựa chọn cho job_type (từ DTO)
-  final List<String> _jobTypes = ['Full-time', 'Part-time', 'Internship', 'Contract','Freelance'];
+  final List<String> _jobTypes = [
+    'Full-time',
+    'Part-time',
+    'Internship',
+    'Contract',
+    'Freelance'
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Khởi tạo giá trị ban đầu từ ViewModel (nếu người dùng đã lọc)
+    // Lấy giá trị bộ lọc hiện tại từ ViewModel để điền vào form
     final vm = context.read<HomeViewModel>();
-    final filter = vm.currentFilter;
+    final currentFilter = vm.currentFilter;
 
-    _locationController = TextEditingController(text: filter.location);
-    _minSalaryController = TextEditingController(text: filter.salary_min?.toString() ?? '');
-    _maxSalaryController = TextEditingController(text: filter.salary_max?.toString() ?? '');
-    _selectedJobType = filter.job_type;
+    _locationController = TextEditingController(text: currentFilter.location);
+    _minSalaryController = TextEditingController(
+        text: currentFilter.salary_min != null ? currentFilter.salary_min.toString() : '');
+    _maxSalaryController = TextEditingController(
+        text: currentFilter.salary_max != null ? currentFilter.salary_max.toString() : '');
+
+    _selectedJobType = currentFilter.job_type;
   }
 
   @override
@@ -47,176 +51,189 @@ class _FilterScreenState extends State<FilterScreen> {
     super.dispose();
   }
 
-  // Hàm xử lý khi nhấn "Apply"
+  // Hàm xử lý Áp dụng
   void _applyFilters() {
     final vm = context.read<HomeViewModel>();
 
+    // Tạo DTO từ dữ liệu nhập
     final dto = FilterJobDto(
-      location: _locationController.text.trim(),
-      salary_min: num.tryParse(_minSalaryController.text),
-      salary_max: num.tryParse(_maxSalaryController.text),
+      location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+      salary_min: double.tryParse(_minSalaryController.text),
+      salary_max: double.tryParse(_maxSalaryController.text),
       job_type: _selectedJobType,
     );
 
-    // Gọi VM để áp dụng filter
+    // Gọi ViewModel để lọc
     vm.applyFilter(dto);
-    Navigator.of(context).pop(); // Đóng bottom sheet
+
+    // Đóng màn hình lọc
+    Navigator.of(context).pop();
   }
 
-  // Hàm xử lý khi nhấn "Clear All"
+  // Hàm Xóa bộ lọc
   void _clearFilters() {
     final vm = context.read<HomeViewModel>();
-    // Gọi fetchJobs() để reset về trang 1 và xóa filter
+
+    // Reset về mặc định (Load lại danh sách ban đầu)
     vm.fetchJobs();
-    Navigator.of(context).pop(); // Đóng bottom sheet
+
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Padding để tránh bàn phím che mất UI
+    // UI Bottom Sheet
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: MediaQuery.of(context).viewInsets.bottom, // Tránh bàn phím che
         left: 20,
         right: 20,
-        top: 20,
+        top: 10,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thanh gạt (giống trong ảnh)
+            // Thanh gạt nhỏ phía trên
             Center(
               child: Container(
                 width: 40,
                 height: 5,
+                margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            // Tiêu đề (giống trong ảnh)
+
             const Text(
-              'Filter',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'Bộ Lọc Tìm Kiếm',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
 
-            // --- TRƯỜNG LỌC 1: LOCATION (Từ DTO) ---
-            _buildSectionTitle('Location'),
+            // 1. Địa điểm
+            _buildSectionTitle('Địa điểm'),
             TextField(
               controller: _locationController,
-              decoration: const InputDecoration(
-                hintText: 'E.g., Ho Chi Minh City, Hanoi...',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: InputDecoration(
+                hintText: 'Nhập thành phố (VD: Ho Chi Minh)',
+                prefixIcon: const Icon(Icons.location_on_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               ),
             ),
             const SizedBox(height: 20),
 
-            // --- TRƯỜNG LỌC 2: JOB TYPE (Từ DTO) ---
-            // (Phần này thay cho "Experience Level" trong ảnh)
-            _buildSectionTitle('Job Type'),
+            // 2. Loại công việc (Chips)
+            _buildSectionTitle('Loại công việc'),
             Wrap(
-              spacing: 8.0, // Khoảng cách ngang giữa các chip
-              runSpacing: 4.0, // Khoảng cách dọc
+              spacing: 8.0,
+              runSpacing: 0.0,
               children: _jobTypes.map((type) {
                 final isSelected = _selectedJobType == type;
                 return ChoiceChip(
                   label: Text(type),
                   selected: isSelected,
-                  onSelected: (isSelected) {
+                  onSelected: (selected) {
                     setState(() {
-                      _selectedJobType = isSelected ? type : null;
+                      _selectedJobType = selected ? type : null;
                     });
                   },
-                  selectedColor: Colors.teal[100], // Màu khi được chọn
-                  backgroundColor: Colors.grey[100],
+                  selectedColor: const Color(0xFF00C89C).withOpacity(0.2),
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.teal[900] : Colors.black,
+                    color: isSelected ? const Color(0xFF00897B) : Colors.black,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  backgroundColor: Colors.grey[100],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: isSelected ? const Color(0xFF00C89C) : Colors.transparent,
+                    ),
                   ),
                 );
               }).toList(),
             ),
             const SizedBox(height: 20),
 
-            // --- TRƯỜNG LỌC 3: SALARY RANGE (Từ DTO) ---
-            // (Phần này không có trong ảnh nhưng CẦN THIẾT cho backend)
-            _buildSectionTitle('Salary Range (VND)'),
+            // 3. Mức lương (Range)
+            _buildSectionTitle('Mức lương (VND/USD)'),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _minSalaryController,
-                    decoration: const InputDecoration(
-                      labelText: 'Min Salary',
-                      hintText: '10000000',
-                      border: OutlineInputBorder(),
-                    ),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'Thấp nhất',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: Text('-', style: TextStyle(fontSize: 20, color: Colors.grey)),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _maxSalaryController,
-                    decoration: const InputDecoration(
-                      labelText: 'Max Salary',
-                      hintText: '50000000',
-                      border: OutlineInputBorder(),
-                    ),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: 'Cao nhất',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 30),
 
-            // --- BUTTONS (Giống trong ảnh) ---
+            // 4. Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _clearFilters, // Gọi hàm xóa filter
+                    onPressed: _clearFilters,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.grey[400]!),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Clear All'),
+                    child: const Text('Xóa bộ lọc', style: TextStyle(color: Colors.black)),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _applyFilters, // Gọi hàm áp dụng
+                    onPressed: _applyFilters,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal, // Màu xanh
+                      backgroundColor: const Color(0xFF00C89C),
                       padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Apply', style: TextStyle(color: Colors.white)),
+                    child: const Text('Áp dụng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 30), // Đệm dưới
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  // Widget hỗ trợ cho tiêu đề
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }

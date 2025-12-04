@@ -1,4 +1,4 @@
-
+// lib/myapp.dart
 
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/utils/responsive_util.dart';
@@ -7,13 +7,15 @@ import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart
 import 'package:job_seeker_frontend/views/login/user/cv_generation_view_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/cv_template_selection_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
+// import 'package:job_seeker_frontend/views/login/user/home_screen.dart'; // Bỏ import cũ này nếu không dùng trực tiếp
 import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/main_screen.dart'; // ✅ Import MainScreen
 import 'package:job_seeker_frontend/views/login/user/notification_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/splash_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/zoom_create_meeting_screen.dart';
 
 class MyApp extends StatelessWidget {
@@ -21,72 +23,35 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Job Seeker App',
+      debugShowCheckedModeBanner: false, // Tắt banner debug cho đẹp
       theme: ThemeData(primarySwatch: Colors.blue),
 
-      // 5. Thêm thuộc tính 'builder' ở đây
       builder: (context, child) {
-        // Gọi hàm tiện ích của bạn
         return ResponsiveUtil.buildResponsiveBreakpoints(child);
       },
 
-      home: MainMenu(),
-      // Giữ nguyên MainMenu của bạn
+      // ✅ 1. Đặt màn hình khởi động là SplashScreen
+      home: const SplashScreen(),
+
       routes: {
-        // Giữ nguyên routes của bạn
         '/login': (_) => LoginScreen(),
         '/zoom': (_) => ZoomCreateMeetingScreen(),
         '/register': (_) => RegisterScreen(),
         '/change_password': (_) => ChangePasswordScreen(),
         '/forgot_password': (_) => ForgotPasswordScreen(),
-        '/home': (_) => HomeScreen(),
+
+        // ✅ 2. Route '/home' trỏ về MainScreen (chứa BottomNav)
+        '/home': (_) => const MainScreen(),
+
         '/search': (_) => SearchScreen(),
-        // '/chat': (_) => ChatViewScreen(),
-        // '/cv_generator': (_) => InputCVGeneratorScreen(),
         '/scan_pdf': (_) => ScanPdfScreen(),
         '/cv_generator': (_) => CvTemplateSelectionScreen(),
         '/save_job': (_) => SavedJobsScreen(),
         '/notification': (_) => NotificationScreen(),
-        '/profile':(_)=>ProfileScreen(),
+        '/profile': (_) => ProfileScreen(),
       },
     );
   }
 }
 
-class MainMenu extends StatelessWidget {
-  final List<Map<String, String>> _screens = [
-    {'title': 'Login', 'route': '/login'},
-    {'title': 'Splash', 'route': '/splash'},
-    {'title': 'Zoom', 'route': '/zoom'},
-    {'title': 'Register', 'route': '/register'},
-    {'title': 'Change Password', 'route': '/change_password'},
-    {'title': 'Forgot Password', 'route': '/forgot_password'},
-    {'title': 'Home', 'route': '/home'},
-    {'title': 'Search', 'route': '/search'},
-    // {'title': 'Chat', 'route': '/chat'},
-    // {'title': 'Login Chat', 'route': '/login_chat'},
-    {'title': 'CV Generator', 'route': '/cv_generator'},
-    {'title': ' Test Scan PDF', 'route': '/scan_pdf'},
-    {'title': 'Create CV from Gemini', 'route': '/cv_gemini'},
-    {'title': 'Test Save Job', 'route': '/save_job'},
-    {'title': 'Test Notification', 'route': '/notification'},
-    {'title':'Test Profile','route':'/profile'},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Job Seeker Main Menu')),
-      body: ListView.builder(
-        itemCount: _screens.length,
-        itemBuilder: (context, index) {
-          final item = _screens[index];
-          return ListTile(
-            title: Text(item['title']!),
-            trailing: Icon(Icons.arrow_forward_ios),
-            onTap: () => Navigator.pushNamed(context, item['route']!),
-          );
-        },
-      ),
-    );
-  }
-}
+// Bạn có thể xóa class MainMenu cũ đi nếu không còn dùng nữa để code gọn gàng.

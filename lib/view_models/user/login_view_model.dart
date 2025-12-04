@@ -58,12 +58,12 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
+// [SỬA ĐỔI] Logic Auto Login thông minh hơn
   // [SỬA ĐỔI] Logic Auto Login thông minh hơn
   Future<void> autoLogin(BuildContext context) async {
     print("🔄 Bắt đầu Auto Login...");
 
     // BƯỚC 1: Thử login bằng Token hệ thống (NestJS Token) đang lưu
-    // (Logic cũ của bạn trong _loginService.tryAutoLogin() vẫn tốt để dùng lại)
     final UserToken? internalToken = await _loginService.tryAutoLogin();
 
     if (internalToken != null) {
@@ -71,6 +71,9 @@ class LoginViewModel extends ChangeNotifier {
       _userId = internalToken.userId;
       notifyListeners();
       print("✅ Auto login bằng Token hệ thống thành công");
+
+      // Nếu đang ở Splash Screen, việc điều hướng sẽ do Splash xử lý hoặc
+      // bạn có thể giữ dòng này nếu muốn chắc chắn.
       Navigator.pushReplacementNamed(context, '/home');
       return;
     }
@@ -81,16 +84,23 @@ class LoginViewModel extends ChangeNotifier {
 
     if (firebaseToken != null) {
       try {
-        // Gọi lại backend để lấy Token hệ thống mới (đồng thời update Device Token luôn)
         await _handleBackendLogin(firebaseToken, context);
-        // _handleBackendLogin đã bao gồm việc navigate sang Home
         print("✅ Auto login bằng Firebase session thành công");
       } catch (e) {
         print("❌ Auto login Firebase thất bại: $e");
-        // Ở lại màn hình login
+        // Nếu lỗi, xóa sạch token để tránh Home hiểu nhầm
+        await _loginService.logout();
       }
     } else {
       print("❌ Không có phiên đăng nhập nào. Người dùng cần login thủ công.");
+
+      // 🔥 QUAN TRỌNG: Xóa sạch token cũ để Home Screen không gọi nhầm API bảo mật
+      await _loginService.logout();
+      _userToken = null;
+      _userId = null;
+      notifyListeners();
+
+      // Không cần navigate ở đây, Splash Screen sẽ tự chuyển sang /home (Guest Mode)
     }
   }
 

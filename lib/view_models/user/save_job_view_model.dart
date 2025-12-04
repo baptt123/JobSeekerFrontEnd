@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // ✅ Import Storage
 import 'package:job_seeker_frontend/models/job-entity.dart';
 import 'package:job_seeker_frontend/services/job_service.dart';
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 
-// Enum để theo dõi trạng thái tải dữ liệu
-enum SavedJobsState { loading, loaded, error }
+// ✅ Thêm trạng thái unauthorized (chưa đăng nhập)
+enum SavedJobsState { loading, loaded, error, unauthorized }
 
 class SavedJobsViewModel extends ChangeNotifier {
   final JobService _apiService = JobService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(); // ✅ Khai báo Storage
 
   SavedJobsState _state = SavedJobsState.loading;
   SavedJobsState get state => _state;
@@ -18,46 +20,58 @@ class SavedJobsViewModel extends ChangeNotifier {
   String _error = '';
   String get error => _error;
 
-  // Hàm tiện ích hiển thị snackbar
   void _showSnackbar(BuildContext context, String message, bool isError) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 1),
       ),
     );
   }
 
-  /// 1. Tải danh sách các job đã lưu từ API
+  /// 1. Tải danh sách các job đã lưu (CÓ KIỂM TRA ĐĂNG NHẬP)
   Future<void> fetchSavedJobs() async {
     _state = SavedJobsState.loading;
     notifyListeners();
+
     try {
-      // Gọi service để lấy job
+      // ✅ Bước 1: Kiểm tra xem có token (đã đăng nhập) hay không
+      final token = await _storage.read(key: 'accessToken');
+
+      if (token == null) {
+        // Nếu chưa đăng nhập -> Chuyển sang trạng thái Unauthorized
+        _state = SavedJobsState.unauthorized;
+        notifyListeners();
+        return; // Dừng, không gọi API
+      }
+
+      // ✅ Bước 2: Nếu đã đăng nhập -> Gọi API
       _savedJobs = await _apiService.getSavedJobs();
       _state = SavedJobsState.loaded;
     } catch (e) {
-      _error = e.toString();
-      _state = SavedJobsState.error;
+      // Nếu lỗi 401 (Token hết hạn) thì cũng coi như chưa đăng nhập
+      if (e.toString().contains("401")) {
+        _state = SavedJobsState.unauthorized;
+      } else {
+        _error = e.toString();
+        _state = SavedJobsState.error;
+      }
     }
     notifyListeners();
   }
 
-  /// 2. Xóa một job khỏi danh sách đã lưu (gọi từ màn hình này)
+  /// 2. Xóa một job khỏi danh sách đã lưu
   Future<void> unsaveJob(
       JobEntity job,
       BuildContext context,
-      HomeViewModel homeViewModel, // Nhận HomeViewModel để đồng bộ
+      HomeViewModel homeViewModel,
       ) async {
     try {
       final jobId = job.jobId;
-      // Gọi API để xóa (soft-delete)
       await _apiService.unsaveJob(jobId);
 
-      // Xóa khỏi danh sách hiện tại (Optimistic update)
       _savedJobs.removeWhere((j) => j.jobId == jobId);
-
-      // Đồng bộ ngược lại với HomeViewModel (cập nhật icon ở Trang chủ)
       homeViewModel.removeSavedId(jobId);
 
       _showSnackbar(context, 'Đã xóa job thành công', false);
@@ -67,18 +81,14 @@ class SavedJobsViewModel extends ChangeNotifier {
     }
   }
 
-  // === CÁC HÀM ĐỒNG BỘ STATE (Được gọi bởi HomeViewModel) ===
-
-  /// 3. Thêm job vào danh sách khi user lưu từ màn hình Home
+  // === CÁC HÀM ĐỒNG BỘ STATE ===
   void addSavedJob(JobEntity job) {
-    // Kiểm tra để không thêm trùng
     if (!_savedJobs.any((j) => j.jobId == job.jobId)) {
-      _savedJobs.insert(0, job); // Thêm vào đầu danh sách
+      _savedJobs.insert(0, job);
       notifyListeners();
     }
   }
 
-  /// 4. Xóa job khỏi danh sách khi user hủy lưu từ màn hình Home
   void removeSavedJob(int jobId) {
     _savedJobs.removeWhere((j) => j.jobId == jobId);
     notifyListeners();

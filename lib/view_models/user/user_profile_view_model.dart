@@ -1,19 +1,17 @@
-// view_models/profile_view_model.dart
+// lib/view_models/user/user_profile_view_model.dart
+
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../dto/update_user_dto.dart';
 import '../../models/user-entity.dart';
 import '../../services/user_service.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 
-// Trạng thái của view
 enum ProfileState { idle, loading, success, error }
 
 class ProfileViewModel extends ChangeNotifier {
   final UserService _userService = UserService();
   final ImagePicker _imagePicker = ImagePicker();
 
-  // Đã thay đổi User? -> UserEntity?
   UserEntity? _user;
   UserEntity? get user => _user;
 
@@ -23,11 +21,9 @@ class ProfileViewModel extends ChangeNotifier {
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
-  // File ảnh đã chọn (từ gallery/camera)
   XFile? _pickedAvatar;
   XFile? get pickedAvatar => _pickedAvatar;
 
-  // Hàm khởi tạo, tự động fetch data
   ProfileViewModel() {
     fetchUserProfile();
   }
@@ -37,43 +33,48 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 1. Lấy thông tin profile
+  // 1. Lấy profile
   Future<void> fetchUserProfile() async {
     _setState(ProfileState.loading);
     try {
       _user = await _userService.getUserProfile();
       _setState(ProfileState.success);
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setState(ProfileState.error);
     }
   }
 
-  // 2. Chọn ảnh avatar
+  // 2. Chọn ảnh từ thư viện
   Future<void> pickImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image != null) {
         _pickedAvatar = image;
-        notifyListeners(); // Cập nhật UI để hiển thị ảnh mới chọn
+        notifyListeners(); // Cập nhật UI để hiện ảnh preview
       }
     } catch (e) {
-      _errorMessage = "Không thể chọn ảnh: $e";
-      _setState(ProfileState.error); // Có thể dùng state riêng cho lỗi chọn ảnh
+      print("Lỗi chọn ảnh: $e");
     }
   }
 
-  // 3. Cập nhật profile
+  // 3. Cập nhật Profile
   Future<bool> updateUserProfile(UpdateUserDto dto) async {
     _setState(ProfileState.loading);
+    _errorMessage = '';
+
     try {
-      // Gọi service với DTO và file ảnh đã chọn
-      _user = await _userService.updateUser(dto, _pickedAvatar);
-      _pickedAvatar = null; // Xóa file đã chọn sau khi update thành công
+      // Gọi API cập nhật
+      final updatedUser = await _userService.updateUser(dto, _pickedAvatar);
+
+      // ✅ CẬP NHẬT THÀNH CÔNG: Gán user mới vào state
+      _user = updatedUser;
+      _pickedAvatar = null; // Xóa ảnh tạm sau khi upload xong
+
       _setState(ProfileState.success);
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setState(ProfileState.error);
       return false;
     }

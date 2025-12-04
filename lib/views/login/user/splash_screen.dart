@@ -1,0 +1,92 @@
+// lib/views/splash_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../view_models/user/login_view_model.dart';
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Gọi hàm kiểm tra đăng nhập ngay khi màn hình được build xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLoginAndNavigate();
+    });
+  }
+
+  Future<void> _checkLoginAndNavigate() async {
+    // 1. Tạo độ trễ giả (ví dụ 2 giây) để người dùng kịp nhìn thấy Logo
+    // (Bạn có thể bỏ dòng này nếu muốn vào nhanh nhất có thể)
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    // 2. Gọi Auto Login
+    final loginVM = context.read<LoginViewModel>();
+
+    // Lưu ý: Hàm autoLogin của bạn trong LoginViewModel hiện tại
+    // đã có logic điều hướng nếu thành công.
+    // Tuy nhiên, nếu thất bại (Guest), nó chỉ print log.
+    // Chúng ta cần xử lý cả 2 trường hợp để luôn vào được Home.
+
+    // Chúng ta sẽ sửa logic autoLogin một chút hoặc xử lý ở đây.
+    // Cách đơn giản nhất là gọi autoLogin, và dù kết quả thế nào cũng vào Home
+    // (Vì HomeScreen mới của bạn đã hỗ trợ cả Guest và User).
+
+    await loginVM.autoLogin(context);
+
+    // Kiểm tra: Nếu LoginViewModel chưa điều hướng (tức là không có token/Guest)
+    // thì chúng ta tự điều hướng vào MainScreen
+    // (Dựa vào biến _userToken hoặc _userId trong VM để check, hoặc đơn giản là push luôn)
+
+    // Để an toàn, thay vì sửa LoginViewModel, ta có thể check:
+    // Nếu màn hình hiện tại vẫn là SplashScreen thì chuyển sang Home
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white, // Hoặc màu chủ đạo của App
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Hiển thị Logo
+            Image.asset(
+              'assets/icon/splash_logo.png',
+              width: 150,
+              height: 150,
+              errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.work, size: 100, color: Color(0xFF00897B)),
+            ),
+            const SizedBox(height: 24),
+            // Loading indicator
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00897B)),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Job Seeker",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF00897B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

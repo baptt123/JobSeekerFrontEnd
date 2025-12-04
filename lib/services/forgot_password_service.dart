@@ -1,35 +1,17 @@
-// services/auth_service.dart
-
 import 'package:dio/dio.dart';
-import 'package:job_seeker_frontend/utils/constant_api.dart';
-
 import '../dto/forgot_password_dto.dart';
+import '../utils/constant_api.dart';
+import '../utils/dio_client.dart';
 
 class ForgotPasswordService {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: ConstantAPI.baseUrl+'/auth', // <-- THAY ĐỔI URL API CỦA BẠN
-  ));
+  final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}/auth');
 
-  // 2. Thay đổi tham số từ String thành ForgotPasswordDto
   Future<String> forgotPassword(ForgotPasswordDto dto) async {
     try {
-      final response = await _dio.put(
-        '/forgot-password',
-        data: dto.toJson(), // <-- 3. Sử dụng phương thức toJson() của DTO
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        return response.data['message'] as String;
-      } else {
-        throw 'Đã xảy ra lỗi không xác định.';
-      }
+      final response = await _dio.put('/forgot-password', data: dto.toJson());
+      return response.data['message'] ?? 'Thành công';
     } on DioException catch (e) {
-      if (e.response?.data != null && e.response?.data['message'] != null) {
-        throw e.response!.data['message'];
-      }
-      throw 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
-    } catch (e) {
-      throw 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      throw e.response?.data['message'] ?? 'Lỗi gửi yêu cầu';
     }
   }
 }
