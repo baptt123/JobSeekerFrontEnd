@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/utils/responsive_util.dart';
+import 'package:job_seeker_frontend/view_models/user/theme_view_model.dart';
 import 'package:job_seeker_frontend/views/login/test/scan_pdf_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/cv_generation_view_screen.dart';
@@ -15,43 +16,79 @@ import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/setting_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/splash_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/zoom_create_meeting_screen.dart';
-
+import 'package:provider/provider.dart';
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Job Seeker App',
-      debugShowCheckedModeBanner: false, // Tắt banner debug cho đẹp
-      theme: ThemeData(primarySwatch: Colors.blue),
+    return Consumer<ThemeViewModel>(
+      builder: (context, themeVM, child) {
+        return MaterialApp(
+          title: 'Job Seeker App',
+          debugShowCheckedModeBanner: false,
 
-      builder: (context, child) {
-        return ResponsiveUtil.buildResponsiveBreakpoints(child);
-      },
+          // --- CẤU HÌNH THEME ---
+          themeMode: themeVM.themeMode,
 
-      // ✅ 1. Đặt màn hình khởi động là SplashScreen
-      home: const SplashScreen(),
+          // 1. Theme Sáng (Light)
+          theme: ThemeData(
+            primarySwatch: Colors.teal,
+            brightness: Brightness.light,
+            scaffoldBackgroundColor: const Color(0xFFF9F9F9),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF00C89C),
+              foregroundColor: Colors.white,
+            ),
+            colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.teal)
+                .copyWith(secondary: const Color(0xFF0077B6)),
+          ),
 
-      routes: {
-        '/login': (_) => LoginScreen(),
-        '/zoom': (_) => ZoomCreateMeetingScreen(),
-        '/register': (_) => RegisterScreen(),
-        '/change_password': (_) => ChangePasswordScreen(),
-        '/forgot_password': (_) => ForgotPasswordScreen(),
+          // 2. Theme Tối (Dark)
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: const Color(0xFF00C89C),
+            scaffoldBackgroundColor: const Color(0xFF121212),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1F1F1F),
+              foregroundColor: Colors.white,
+            ),
+            // ✅ ĐÃ SỬA LỖI: Dùng CardThemeData thay vì CardTheme
+            cardTheme: const CardThemeData(
+              color: Color(0xFF303030),
+            ),
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00C89C),
+              secondary: Color(0xFF0077B6),
+            ),
+          ),
 
-        // ✅ 2. Route '/home' trỏ về MainScreen (chứa BottomNav)
-        '/home': (_) => const MainScreen(),
+          builder: (context, child) {
+            return ResponsiveUtil.buildResponsiveBreakpoints(child);
+          },
 
-        '/search': (_) => SearchScreen(),
-        '/scan_pdf': (_) => ScanPdfScreen(),
-        '/cv_generator': (_) => CvTemplateSelectionScreen(),
-        '/save_job': (_) => SavedJobsScreen(),
-        '/notification': (_) => NotificationScreen(),
-        '/profile': (_) => ProfileScreen(),
+          home: const SplashScreen(),
+
+          routes: {
+            '/login': (_) => const LoginScreen(),
+            '/home': (_) => const MainScreen(),
+            '/settings': (_) => const SettingsScreen(),
+            '/zoom': (_) => const ZoomCreateMeetingScreen(),
+            '/register': (_) => const RegisterScreen(),
+            '/change_password': (_) => const ChangePasswordScreen(),
+            '/forgot_password': (_) => const ForgotPasswordScreen(),
+            '/search': (_) => const SearchScreen(),
+            '/scan_pdf': (_) => const ScanPdfScreen(),
+            '/cv_generator': (_) => const CvTemplateSelectionScreen(),
+            '/save_job': (_) => const SavedJobsScreen(),
+            '/notification': (_) => NotificationScreen(),
+            '/profile': (_) => const ProfileScreen(),
+          },
+        );
       },
     );
   }
 }
-
-// Bạn có thể xóa class MainMenu cũ đi nếu không còn dùng nữa để code gọn gàng.

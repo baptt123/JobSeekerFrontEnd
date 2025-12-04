@@ -1,10 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../../view_models/user/login_view_model.dart';
-import 'forgot_password_screen.dart'; // ✅ import màn hình quên mật khẩu
+import 'forgot_password_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    // Gọi AutoLogin để check nếu user đã từng đăng nhập
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LoginViewModel>().autoLogin(context);
     });
@@ -33,10 +34,24 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Hàm xử lý khi bấm nút "Về trang chủ"
+  void _onBackToHome() {
+    // Kiểm tra xem có trang nào nằm dưới không (thường là trang Home Guest)
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context); // Đóng Login, quay về trang trước
+    } else {
+      // Trường hợp hiếm: Vào thẳng Login mà không qua Home -> Mới cần push
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Lắng nghe ViewModel
     final vm = context.read<LoginViewModel>();
-    final isLoading = context.watch<LoginViewModel>().isLoading;
+    // Lắng nghe isLoading để hiển thị vòng xoay
+    final isLoading = context.select<LoginViewModel, bool>((vm) => vm.isLoading);
+
     final theme = Theme.of(context);
     final customColorScheme = theme.colorScheme.copyWith(
       primary: const Color(0xFF00C89C),
@@ -45,6 +60,25 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     return Scaffold(
+      // ✅ AppBar trong suốt với nút Back xử lý đúng logic
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.grey),
+          tooltip: 'Về trang chủ',
+          onPressed: _onBackToHome, // Gọi hàm xử lý pop
+        ),
+        title: GestureDetector(
+          onTap: _onBackToHome, // Bấm vào chữ cũng back được
+          child: const Text(
+            "Trang chủ",
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+        ),
+        centerTitle: false,
+        titleSpacing: 0,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -54,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset('assets/icon/logo.png', height: 300,width: 300,),
+                  Image.asset('assets/icon/logo.png', height: 150, width: 150), // Giảm size logo chút cho cân đối
                   const SizedBox(height: 40),
                   const Text(
                     "Mời bạn đăng nhập!",
@@ -62,13 +96,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     "Hãy nhập thông tin của bạn ngay tại đây để đăng nhập",
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 30),
 
+                  // Nút Google Login
                   OutlinedButton.icon(
                     onPressed: isLoading ? null : () => vm.loginWithGoogle(context),
                     icon: Image.asset('assets/icon/google logo.png', height: 24),
@@ -101,6 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
+                  // Input Email
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -117,6 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Input Password
                   TextField(
                     controller: passwordController,
                     obscureText: !_isPasswordVisible,
@@ -146,11 +183,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 10),
 
+                  // Quên mật khẩu
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // ✅ Điều hướng sang trang quên mật khẩu
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
@@ -164,6 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
+                  // Nút Đăng nhập
                   ElevatedButton(
                     onPressed: isLoading
                         ? null
@@ -193,6 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
+                  // Đăng ký
                   Center(
                     child: RichText(
                       text: TextSpan(
@@ -207,7 +246,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                // ✅ Điều hướng sang trang đăng ký
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(builder: (context) => const RegisterScreen()),
