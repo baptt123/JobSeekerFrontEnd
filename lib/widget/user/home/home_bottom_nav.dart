@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
+// ĐỊNH NGHĨA MÀU CHỦ ĐẠO
+const Color kPrimaryColor = Color(0xFF6C63FF);
+
 class HomeBottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
-
-  // Giả sử bạn nhận thêm số lượng tin nhắn chưa đọc từ bên ngoài vào
   final int unreadMessagesCount;
 
   const HomeBottomNav({
     Key? key,
     required this.currentIndex,
     required this.onTap,
-    this.unreadMessagesCount = 3, // Ví dụ đang có 3 tin nhắn chưa đọc
+    this.unreadMessagesCount = 0,
   }) : super(key: key);
 
   @override
@@ -21,7 +22,7 @@ class HomeBottomNav extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: kPrimaryColor.withOpacity(0.1), // ✅ Shadow ánh tím nhẹ
             spreadRadius: 1,
             blurRadius: 20,
             offset: const Offset(0, -5),
@@ -35,7 +36,7 @@ class HomeBottomNav extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
 
-        selectedItemColor: const Color(0xFF00C89C),
+        selectedItemColor: kPrimaryColor, // ✅ Icon được chọn màu Tím
         unselectedItemColor: Colors.grey.shade400,
 
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
@@ -49,31 +50,31 @@ class HomeBottomNav extends StatelessWidget {
             label: 'Trang chủ',
           ),
 
-          // 2. SAVED (Có chấm đỏ nhỏ báo hiệu có Job mới phù hợp)
+          // 2. SAVED
           BottomNavigationBarItem(
             icon: Badge(
-              isLabelVisible: true, // Hiện chấm đỏ
-              smallSize: 8, // Kích thước chấm nhỏ
+              isLabelVisible: true,
+              smallSize: 8,
+              backgroundColor: Colors.redAccent,
               child: const Icon(Icons.bookmark_border),
             ),
             activeIcon: const Icon(Icons.bookmark),
             label: 'Đã lưu',
           ),
 
-          // 3. CENTER TAB: TOOLS (CV, Gemini, Scan)
-          // Làm icon này to hơn và nổi bật hẳn lên
+          // 3. CENTER TAB: TOOLS
           BottomNavigationBarItem(
             icon: Container(
-              padding: const EdgeInsets.all(12), // To hơn một chút
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: currentIndex == 2
-                    ? const Color(0xFF00C89C) // Khi chọn thì nền xanh đậm
-                    : const Color(0xFF00C89C).withOpacity(0.1), // Không chọn thì nền nhạt
+                    ? kPrimaryColor // ✅ Nền tím đậm khi chọn
+                    : kPrimaryColor.withOpacity(0.1), // ✅ Nền tím nhạt khi không chọn
                 shape: BoxShape.circle,
                 boxShadow: currentIndex == 2
-                    ? [ // Thêm shadow cho nút giữa khi được chọn
+                    ? [
                   BoxShadow(
-                    color: const Color(0xFF00C89C).withOpacity(0.4),
+                    color: kPrimaryColor.withOpacity(0.4), // ✅ Shadow tím
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -81,18 +82,18 @@ class HomeBottomNav extends StatelessWidget {
                     : null,
               ),
               child: Icon(
-                Icons.dashboard_customize_outlined, // Đổi icon thành dạng "Menu/Tool"
+                Icons.dashboard_customize_outlined,
                 size: 26,
-                color: currentIndex == 2 ? Colors.white : const Color(0xFF00C89C),
+                color: currentIndex == 2 ? Colors.white : kPrimaryColor, // ✅ Icon tím
               ),
             ),
-            label: '', // Bỏ label text để icon giữa đứng một mình cho đẹp
+            label: '',
           ),
 
-          // 4. MESSAGE (Có số lượng tin nhắn)
+          // 4. MESSAGE
           BottomNavigationBarItem(
             icon: Badge(
-              label: Text('$unreadMessagesCount'), // Số tin nhắn
+              label: Text('$unreadMessagesCount'),
               isLabelVisible: unreadMessagesCount > 0,
               backgroundColor: Colors.red,
               textColor: Colors.white,

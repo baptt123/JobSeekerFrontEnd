@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 // ... các import khác của bạn ...
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/services/local_notification_service.dart';
+import 'package:job_seeker_frontend/services/manage_cv_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/change_password_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/conversation_list_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/cv_generation_view_model.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
+        ChangeNotifierProvider(create: (_) => ManageCvViewModel()),
       ],
       child: MyApp(),
     ),

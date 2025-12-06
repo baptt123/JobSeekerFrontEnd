@@ -1,13 +1,15 @@
+// lib/views/login/user/cv_template_selection_screen.dart
+
 import 'package:flutter/material.dart';
+// ✅ IMPORT màn hình đích
+import 'cv_generation_view_screen.dart';
 
 class CvTemplateSelectionScreen extends StatelessWidget {
   const CvTemplateSelectionScreen({super.key});
 
   final List<Map<String, String>> templates = const [
-    {'id': '1', 'name': 'Modern Blue', 'image': 'assets/images/cv_template_1.png'},
-    {'id': '2', 'name': 'Classic Grey', 'image': 'assets/images/cv_template_2.png'},
-    // {'id': '3', 'name': 'Professional', 'image': 'assets/images/cv_template_3.png'},
-    // {'id': '4', 'name': 'Creative', 'image': 'assets/images/cv_template_4.png'},
+    {'id': '1', 'name': 'Modern Blue', 'image': 'assets/icon/cv_template_1.png'},
+    {'id': '2', 'name': 'Classic Grey', 'image': 'assets/icon/cv_template_2.png'},
   ];
 
   @override
@@ -27,23 +29,43 @@ class CvTemplateSelectionScreen extends StatelessWidget {
           final template = templates[index];
           return GestureDetector(
             onTap: () {
-              // Chuyển sang màn hình nhập liệu với templateId đã chọn
-              Navigator.pushNamed(context, '/cv_generation', arguments: template['id']);
+              // ✅ FIX: Dùng Navigator.push thay vì pushNamed để tránh lỗi "Could not find generator"
+              // và truyền trực tiếp tham số templateId vào màn hình đích.
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CvGenerationViewScreen(
+                    templateId: template['id'],
+                  ),
+                ),
+              );
             },
             child: Card(
               elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(
                     child: Container(
-                      color: Colors.grey[300],
-                      child: const Center(child: Icon(Icons.description, size: 50, color: Colors.grey)),
-                      // Sau này thay bằng: Image.asset(template['image']!, fit: BoxFit.cover),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      ),
+                      child: template['image'] != null && template['image']!.contains('assets')
+                          ? Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Image.asset(
+                          template['image']!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_,__,___) => const Icon(Icons.description, size: 50, color: Colors.grey),
+                        ),
+                      )
+                          : const Center(child: Icon(Icons.description, size: 50, color: Colors.grey)),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.all(12.0),
                     child: Text(
                       template['name']!,
                       textAlign: TextAlign.center,

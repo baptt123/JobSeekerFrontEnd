@@ -6,11 +6,14 @@ import 'dart:async';
 
 import '../../../view_models/user/home_view_model.dart';
 import '../../../view_models/user/save_job_view_model.dart';
-import '../../../widget/user/home/home_header.dart'; // Import file Header vừa sửa ở trên
+import '../../../widget/user/home/home_header.dart';
 import 'conversation_list_screen.dart';
 import 'filter_screen.dart';
 import 'search_screen.dart';
 import 'job_detail_screen.dart';
+
+// ĐỊNH NGHĨA MÀU CHỦ ĐẠO
+const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -71,11 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF9F9F9),
-      // Bỏ AppBar mặc định đi vì chúng ta đã có HomeHeader đẹp rồi
-      // Hoặc nếu muốn giữ nút Menu thì set background trong suốt
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Trong suốt để thấy Header bên dưới
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
@@ -95,24 +96,24 @@ class _HomeScreenState extends State<HomeScreen> {
           if (vm.state == HomeState.loading)
             Container(
               color: Colors.black.withOpacity(0.1),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: CircularProgressIndicator(color: kPrimaryColor)),
             ),
         ],
       ),
     );
   }
 
-  // ✅ DRAWER: Xử lý logic Đăng nhập / Đăng xuất
+  // ✅ DRAWER: Đã chỉnh sang màu Tím
   Widget _buildDrawer(BuildContext context, HomeViewModel vm) {
     final user = vm.currentUser;
-    final bool isUserLoggedIn = vm.isRecommendedMode; // Hoặc check user != null
+    final bool isUserLoggedIn = vm.isRecommendedMode;
 
     return Drawer(
       child: Column(
         children: [
           // Drawer Header
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF00C89C)),
+            decoration: const BoxDecoration(color: kPrimaryColor), // ✅ Nền Tím
             accountName: Text(
               isUserLoggedIn ? (user?.fullName ?? "Người dùng") : "Khách",
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
@@ -124,14 +125,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? NetworkImage(user!.avatarUrl!)
                   : null,
               child: (!isUserLoggedIn || user?.avatarUrl == null)
-                  ? const Icon(Icons.person, size: 40, color: Color(0xFF00C89C))
+                  ? const Icon(Icons.person, size: 40, color: kPrimaryColor) // ✅ Icon Tím
                   : null,
             ),
           ),
 
-          // Menu Items chung
+          // Menu Items
           ListTile(
-            leading: const Icon(Icons.document_scanner, color: Colors.blue),
+            leading: const Icon(Icons.document_scanner, color: Colors.blueAccent),
             title: const Text("Quét CV (Scan PDF)"),
             onTap: () {
               Navigator.pop(context);
@@ -143,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.auto_awesome, color: Colors.purple),
+            leading: const Icon(Icons.auto_awesome, color: Colors.deepPurpleAccent),
             title: const Text("Tạo CV với Gemini AI"),
             onTap: () {
               Navigator.pop(context);
@@ -164,10 +165,9 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          const Spacer(), // Đẩy phần Login/Logout xuống đáy
+          const Spacer(),
           const Divider(),
 
-          // ✅ NÚT LOGIN / LOGOUT DỰA TRÊN TRẠNG THÁI
           if (isUserLoggedIn)
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
@@ -190,8 +190,8 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           else
             ListTile(
-              leading: const Icon(Icons.login, color: Color(0xFF00C89C)),
-              title: const Text("Đăng nhập", style: TextStyle(color: Color(0xFF00C89C), fontWeight: FontWeight.bold)),
+              leading: const Icon(Icons.login, color: kPrimaryColor), // ✅ Icon Tím
+              title: const Text("Đăng nhập", style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)), // ✅ Chữ Tím
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/login');
@@ -228,12 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              // ✅ Header mới xử lý cả Login/Guest
               HomeHeader(user: vm.currentUser),
 
-              // Search Bar đè lên
               Positioned(
-                bottom: 0, // Đặt ở đáy của Header (do padding bottom header lớn)
+                bottom: 0,
                 left: 20,
                 right: 20,
                 child: GestureDetector(
@@ -244,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
 
-          const SizedBox(height: 30), // Khoảng cách sau SearchBar
+          const SizedBox(height: 30),
 
           // Banner Slider
           _buildBannerSection(),
@@ -282,11 +280,10 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-          // Loading More
           if (vm.state == HomeState.loadingMore)
             const Padding(
               padding: EdgeInsets.all(20.0),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: CircularProgressIndicator(color: kPrimaryColor)),
             ),
 
           const SizedBox(height: 80),
@@ -295,7 +292,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Các hàm phụ trợ (FakeSearch, Banner, JobItem) giữ nguyên như cũ ---
   Widget _buildFakeSearchBar() {
     return Container(
       height: 50,
@@ -309,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
           children: [
-            const Icon(Icons.search, color: Color(0xFF00C89C)),
+            const Icon(Icons.search, color: kPrimaryColor), // ✅ Icon Tím
             const SizedBox(width: 12),
             Text('Tìm kiếm việc làm, công ty...', style: TextStyle(color: Colors.grey[500], fontSize: 14))
           ]
@@ -327,9 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
               controller: _bannerController,
               onPageChanged: (index) => setState(() => _currentBannerIndex = index),
               children: [
-                _buildBannerItem(const Color(0xFF4A90E2), "Tuyển dụng IT", "Lương lên đến \$2000", Icons.code),
+                _buildBannerItem(const Color(0xFF5F27CD), "Tuyển dụng IT", "Lương lên đến \$2000", Icons.code),
                 _buildBannerItem(const Color(0xFFFF9F43), "Cơ hội Marketing", "Môi trường năng động", Icons.campaign),
-                _buildBannerItem(const Color(0xFF5F27CD), "Thiết kế đồ hoạ", "Sáng tạo không giới hạn", Icons.brush),
+                _buildBannerItem(const Color(0xFF4A90E2), "Thiết kế đồ hoạ", "Sáng tạo không giới hạn", Icons.brush),
               ],
             ),
           ),
@@ -341,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: _currentBannerIndex == index ? 20 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: _currentBannerIndex == index ? const Color(0xFF00C89C) : Colors.grey[300],
+                color: _currentBannerIndex == index ? kPrimaryColor : Colors.grey[300], // ✅ Dot Tím
                 borderRadius: BorderRadius.circular(4),
               ),
             )),
@@ -432,7 +428,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               IconButton(
-                icon: Icon(vm.isJobSaved(job.jobId) ? Icons.bookmark : Icons.bookmark_border, color: vm.isJobSaved(job.jobId) ? const Color(0xFF00C89C) : Colors.grey[400]),
+                // ✅ Bookmark Tím
+                icon: Icon(vm.isJobSaved(job.jobId) ? Icons.bookmark : Icons.bookmark_border, color: vm.isJobSaved(job.jobId) ? kPrimaryColor : Colors.grey[400]),
                 onPressed: () { vm.toggleSaveJob(job, context, context.read<SavedJobsViewModel>()); },
               ),
             ],

@@ -1,8 +1,14 @@
+// lib/views/home/filter_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 import '../../../dto/filter_job_dto.dart';
+
+// 🔥 Định nghĩa màu chủ đạo (Tím)
+const Color kPrimaryColor = Color(0xFF6C63FF);
+const Color kDarkPrimaryColor = Color(0xFF5F27CD);
 
 class FilterScreen extends StatefulWidget {
   const FilterScreen({Key? key}) : super(key: key);
@@ -117,9 +123,13 @@ class _FilterScreenState extends State<FilterScreen> {
               controller: _locationController,
               decoration: InputDecoration(
                 hintText: 'Nhập thành phố (VD: Ho Chi Minh)',
-                hintStyle: TextStyle(color: Colors.grey),
+                hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: Icon(Icons.location_on_outlined, color: theme.iconTheme.color),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder( // Viền khi focus màu Tím
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: kPrimaryColor, width: 2),
+                ),
                 filled: true,
                 fillColor: inputFillColor,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -142,19 +152,21 @@ class _FilterScreenState extends State<FilterScreen> {
                       _selectedJobType = selected ? type : null;
                     });
                   },
-                  // Màu sắc tương thích Dark Mode
-                  selectedColor: const Color(0xFF00C89C).withOpacity(0.2),
+                  // 🔥 UPDATED: Màu nền khi chọn (Tím nhạt)
+                  selectedColor: kPrimaryColor.withOpacity(0.2),
                   backgroundColor: chipBackgroundColor,
                   labelStyle: TextStyle(
+                    // 🔥 UPDATED: Màu chữ khi chọn (Tím đậm)
                     color: isSelected
-                        ? const Color(0xFF00897B)
+                        ? kDarkPrimaryColor
                         : theme.textTheme.bodyMedium?.color,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: BorderSide(
-                      color: isSelected ? const Color(0xFF00C89C) : Colors.transparent,
+                      // 🔥 UPDATED: Viền khi chọn (Tím)
+                      color: isSelected ? kPrimaryColor : Colors.transparent,
                     ),
                   ),
                 );
@@ -176,6 +188,11 @@ class _FilterScreenState extends State<FilterScreen> {
                       filled: true,
                       fillColor: inputFillColor,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: kPrimaryColor, width: 2),
+                      ),
+                      floatingLabelStyle: const TextStyle(color: kPrimaryColor),
                     ),
                   ),
                 ),
@@ -193,6 +210,11 @@ class _FilterScreenState extends State<FilterScreen> {
                       filled: true,
                       fillColor: inputFillColor,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: kPrimaryColor, width: 2),
+                      ),
+                      floatingLabelStyle: const TextStyle(color: kPrimaryColor),
                     ),
                   ),
                 ),
@@ -219,7 +241,8 @@ class _FilterScreenState extends State<FilterScreen> {
                   child: ElevatedButton(
                     onPressed: _applyFilters,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C89C),
+                      // 🔥 UPDATED: Nền nút Áp dụng màu Tím
+                      backgroundColor: kPrimaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),

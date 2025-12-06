@@ -1,3 +1,3 @@
 class ConstantAPI {
-  static const String baseUrl = "http://10.50.205.194:3000";
+  static const String baseUrl = "http://192.168.67.104:3000";
 }

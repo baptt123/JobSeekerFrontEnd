@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+// ĐỊNH NGHĨA MÀU CHỦ ĐẠO
+const Color kPrimaryColor = Color(0xFF6C63FF);
+
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   // Các callback để xử lý sự kiện từ bên ngoài truyền vào
   final VoidCallback onMenuPressed;
@@ -20,8 +23,9 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFF00C89C), // Màu chủ đạo của App
+      backgroundColor: kPrimaryColor, // ✅ Đổi sang màu Tím
       elevation: 0,
+      centerTitle: true,
       leading: IconButton(
         icon: const Icon(Icons.menu, color: Colors.white),
         tooltip: 'Menu',
@@ -33,9 +37,9 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 20,
+          letterSpacing: 0.5,
         ),
       ),
-      centerTitle: true,
       actions: [
         // 1. Nút Filter
         IconButton(
@@ -55,23 +59,26 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         // 3. Nút Đăng nhập (Chỉ hiện khi là Guest)
         if (!isUser)
           Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: TextButton.icon(
-              onPressed: onLoginPressed,
-              icon: const Icon(Icons.login, color: Colors.white, size: 20),
-              label: const Text(
-                'Đăng nhập',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold
+            padding: const EdgeInsets.only(right: 16.0), // Căn lề phải rộng hơn chút cho đẹp
+            child: Center(
+              child: TextButton.icon(
+                onPressed: onLoginPressed,
+                icon: const Icon(Icons.login, color: Colors.white, size: 18),
+                label: const Text(
+                  'Đăng nhập',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13
+                  ),
                 ),
-              ),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2), // Nền mờ
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.2), // Nền mờ trên nền Tím
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30), // Bo tròn dạng viên thuốc
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ),

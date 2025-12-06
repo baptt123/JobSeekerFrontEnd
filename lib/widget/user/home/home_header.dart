@@ -1,11 +1,10 @@
-// lib/widget/user/home/home_header.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/user-entity.dart';
 import '../../../../view_models/user/notification_view_model.dart';
-// Giả sử AppColors.primary là màu xanh ngọc #00C89C
-import '../../../../utils/app_colors.dart';
+
+// ĐỊNH NGHĨA MÀU CHỦ ĐẠO (TÍM)
+const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class HomeHeader extends StatelessWidget {
   final UserEntity? user;
@@ -23,7 +22,7 @@ class HomeHeader extends StatelessWidget {
       // Padding bottom lớn (80) để search bar có thể đè lên
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
       decoration: const BoxDecoration(
-        color: Color(0xFF00C89C), // Hoặc AppColors.primary
+        color: kPrimaryColor, // ✅ Đổi sang màu Tím
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
       child: SafeArea(
@@ -33,7 +32,6 @@ class HomeHeader extends StatelessWidget {
             // --- AVATAR ---
             GestureDetector(
               onTap: () {
-                // Nếu là guest bấm avatar cũng cho sang login
                 if (isGuest) Navigator.pushNamed(context, '/login');
               },
               child: CircleAvatar(
@@ -43,7 +41,7 @@ class HomeHeader extends StatelessWidget {
                     ? NetworkImage(avatar)
                     : null,
                 child: (avatar == null || isGuest)
-                    ? const Icon(Icons.person, color: Color(0xFF00C89C))
+                    ? const Icon(Icons.person, color: kPrimaryColor) // ✅ Icon tím
                     : null,
               ),
             ),
@@ -52,12 +50,11 @@ class HomeHeader extends StatelessWidget {
             // --- TEXT INFO ---
             Expanded(
               child: isGuest
-                  ? _buildGuestInfo(context) // Giao diện cho khách
-                  : _buildUserInfo(name),    // Giao diện cho User
+                  ? _buildGuestInfo(context)
+                  : _buildUserInfo(name),
             ),
 
             // --- NOTIFICATION ICON ---
-            // Chỉ hiện thông báo nếu đã đăng nhập (tuỳ logic của bạn, ở đây tôi để hiện luôn nhưng có thể ẩn nếu muốn)
             if (!isGuest)
               Consumer<NotificationViewModel>(
                 builder: (_, vm, __) => Stack(
@@ -71,7 +68,7 @@ class HomeHeader extends StatelessWidget {
                       child: IconButton(
                         onPressed: () => Navigator.pushNamed(context, '/notification'),
                         icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
-                        constraints: const BoxConstraints(), // Thu gọn padding mặc định
+                        constraints: const BoxConstraints(),
                         padding: const EdgeInsets.all(8),
                       ),
                     ),
@@ -97,7 +94,6 @@ class HomeHeader extends StatelessWidget {
     );
   }
 
-  // Widget hiển thị khi ĐÃ ĐĂNG NHẬP
   Widget _buildUserInfo(String name) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,7 +111,6 @@ class HomeHeader extends StatelessWidget {
     );
   }
 
-  // Widget hiển thị khi CHƯA ĐĂNG NHẬP (Guest)
   Widget _buildGuestInfo(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,7 +129,7 @@ class HomeHeader extends StatelessWidget {
             child: const Text(
               "Đăng nhập / Đăng ký",
               style: TextStyle(
-                  color: Color(0xFF00C89C),
+                  color: kPrimaryColor, // ✅ Chữ màu Tím
                   fontWeight: FontWeight.bold,
                   fontSize: 14
               ),

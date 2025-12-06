@@ -1,5 +1,6 @@
 // lib/myapp.dart
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/views/login/user/manage_cv_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/utils/app_colors.dart';
 import 'package:job_seeker_frontend/view_models/user/theme_view_model.dart';
@@ -102,6 +103,7 @@ class MyApp extends StatelessWidget {
             '/save_job': (_) => const SavedJobsScreen(),
             '/notification': (_) => const NotificationScreen(),
             '/profile': (_) => const ProfileScreen(),
+            '/manage_cv': (_) => const ManageCvScreen(),
           },
         );
       },
