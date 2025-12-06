@@ -1,7 +1,28 @@
-// lib/models/job_entity.dart
-// (Cập nhật với fromFlatJson và skills)
+import 'company-entity.dart';
 
-import 'company-entity.dart'; // Đảm bảo bạn có file này
+// Class chứa thông tin nhà tuyển dụng
+class RecruiterInfo {
+  final int id;
+  final String fullName;
+  final String? avatarUrl;
+  final String? email;
+
+  RecruiterInfo({
+    required this.id,
+    required this.fullName,
+    this.avatarUrl,
+    this.email,
+  });
+
+  factory RecruiterInfo.fromJson(Map<String, dynamic> json) {
+    return RecruiterInfo(
+      id: json['id'] ?? 0,
+      fullName: json['full_name'] ?? 'Nhà tuyển dụng',
+      avatarUrl: json['avatar_url'],
+      email: json['email'],
+    );
+  }
+}
 
 class JobEntity {
   final int jobId;
@@ -15,9 +36,11 @@ class JobEntity {
   final bool isApplied;
   final bool isSaved;
   final CompanyEntity? company;
-  final DateTime? deadline; // ⭐️ THÊM field này
-  // ⭐️ THÊM LẠI TRƯỜNG SKILLS (Vì fromFlatJson cần nó)
+  final DateTime? deadline;
   final List<String> skills;
+
+  // [UPDATE] Thêm trường recruiter
+  final RecruiterInfo? recruiter;
 
   JobEntity({
     required this.jobId,
@@ -31,31 +54,26 @@ class JobEntity {
     required this.isApplied,
     required this.isSaved,
     this.company,
-    this.skills = const [], // ⭐️ Khởi tạo mặc định
+    this.skills = const [],
     this.deadline,
+    this.recruiter, // [UPDATE] Constructor
   });
 
-  // --- FACTORY CŨ (Để đọc JSON lồng nhau từ API chi tiết) ---
   factory JobEntity.fromJson(Map<String, dynamic> json) {
-    // Helper để parse double một cách an toàn
     double? parseDoubleSafe(dynamic value) {
       if (value is num) return value.toDouble();
       if (value is String) return double.tryParse(value);
       return null;
     }
 
-    // ⭐️ Xử lý skills (nếu có)
-    final skillsList =
-        (json['skills'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            ?.toList() ??
+    final skillsList = (json['skills'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList() ??
         <String>[];
 
     return JobEntity(
       jobId: json['job_id'] as int? ?? 0,
-      // An toàn hơn
       title: json['title'] as String? ?? 'N/A',
-      // An toàn hơn
       description: json['description'] as String?,
       requirements: json['requirements'] as String?,
       salaryMin: parseDoubleSafe(json['salary_min']),
@@ -67,51 +85,43 @@ class JobEntity {
       deadline: json['deadline'] != null
           ? DateTime.parse(json['deadline'])
           : null,
-      // Xử lý object company lồng nhau
       company: json['company'] != null && json['company'] is Map
           ? CompanyEntity.fromJson(json['company'] as Map<String, dynamic>)
           : null,
+      skills: skillsList,
 
-      skills: skillsList, // ⭐️ Gán skills
+      // [UPDATE] Parse recruiter info từ field 'postedBy' do backend trả về
+      recruiter: json['postedBy'] != null
+          ? RecruiterInfo.fromJson(json['postedBy'])
+          : null,
     );
   }
 
-  // --- ⭐️ FACTORY MỚI (Để đọc JSON phẳng từ API danh sách) ---
   factory JobEntity.fromFlatJson(Map<String, dynamic> json) {
-    // Helper để parse double một cách an toàn
     double? parseDoubleSafe(dynamic value) {
       if (value is num) return value.toDouble();
       if (value is String) return double.tryParse(value);
       return null;
     }
 
-    // 1. Đọc các trường phẳng từ DTO
     final companyName = json['company_name'] as String?;
     final logoUrl = json['logo_url'] as String?;
     final int companyId = json['company_id'] as int? ?? 0;
 
-
-    deadline:json['deadline'] != null ? DateTime.parse(json['deadline']) : null;
-    // 2. "Tái tạo" (re-hydrate) đối tượng CompanyEntity
     CompanyEntity? companyInstance;
     if (companyName != null) {
       companyInstance = CompanyEntity(
-        // Giả sử CompanyEntity có constructor phù hợp
-        // Đây là ví dụ, bạn cần chỉnh cho khớp với CompanyEntity
-        companyId: companyId, // Không có ID từ JSON phẳng, dùng tạm 0
+        companyId: companyId,
         name: companyName,
         logoUrl: logoUrl,
-        // Các trường khác sẽ là null hoặc giá trị mặc định...
       );
     }
-    // 3. Đọc skills
-    final skillsList =
-        (json['skills'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            ?.toList() ??
+
+    final skillsList = (json['skills'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList() ??
         <String>[];
 
-    // 4. Trả về JobEntity
     return JobEntity(
       jobId: json['job_id'] as int? ?? 0,
       title: json['title'] as String? ?? 'N/A',
@@ -124,15 +134,12 @@ class JobEntity {
       deadline: json['deadline'] != null
           ? DateTime.parse(json['deadline'])
           : null,
-      // Gán đối tượng company vừa "tái tạo"
       company: companyInstance,
-
-      // Gán skills
       skills: skillsList,
-
-      // Cờ trạng thái
       isApplied: json['isApplied'] as bool? ?? false,
       isSaved: json['isSaved'] as bool? ?? false,
+      // fromFlatJson thường dùng cho list, có thể không cần recruiter info ngay
+      recruiter: null,
     );
   }
 }

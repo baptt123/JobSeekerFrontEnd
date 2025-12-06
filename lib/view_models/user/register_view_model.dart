@@ -1,9 +1,9 @@
-// lib/viewmodels/register_viewmodel.dart
+// lib/view_models/user/register_view_model.dart
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:job_seeker_frontend/dto/register_dto.dart'; // Giữ nguyên import của bạn
-import 'package:job_seeker_frontend/services/register_service.dart'; // Giữ nguyên import của bạn
+import 'package:job_seeker_frontend/dto/register_dto.dart';
+import 'package:job_seeker_frontend/services/register_service.dart';
 
 class RegisterViewModel extends ChangeNotifier {
   final RegisterService _registerService = RegisterService();
@@ -16,9 +16,8 @@ class RegisterViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isSuccess => _isSuccess;
 
-// lib/viewmodels/register_view_model.dart
-
-  Future<void> register({
+  // Sửa hàm register để trả về bool
+  Future<bool> register({
     required String fullName,
     required String email,
     required String password,
@@ -37,38 +36,35 @@ class RegisterViewModel extends ChangeNotifier {
 
       final response = await _registerService.register(registerData);
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         _isSuccess = true;
+        _isLoading = false;
+        notifyListeners();
+        return true; // Đăng ký thành công
       }
     } on DioException catch (e) {
       if (e.response != null && e.response?.data is Map) {
         final responseData = e.response!.data as Map<String, dynamic>;
-
-        // Lấy giá trị của key 'message' ở cấp ngoài cùng
         final messageValue = responseData['message'];
 
-        // ======================= PHẦN SỬA LỖI CHÍNH =======================
         if (messageValue is Map) {
-          // TRƯỜNG HỢP 1: `message` là một object (như lỗi email tồn tại)
-          // Truy cập vào key 'message' bên trong object đó
           _errorMessage = messageValue['message'] as String?;
         } else if (messageValue is List) {
-          // TRƯỜNG HỢP 2: `message` là một danh sách (lỗi validation từ Pipe)
           _errorMessage = messageValue.join('\n');
         } else if (messageValue is String) {
-          // TRƯỜNG HỢP 3: `message` là một chuỗi đơn giản
           _errorMessage = messageValue;
         } else {
           _errorMessage = 'Lỗi không xác định từ máy chủ.';
         }
-        // =================================================================
-
       } else {
         _errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
       }
+    } catch (e) {
+      _errorMessage = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+    return false; // Đăng ký thất bại
   }
 }

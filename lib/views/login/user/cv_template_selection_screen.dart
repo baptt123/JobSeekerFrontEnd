@@ -1,98 +1,60 @@
-//
-// 📄 [TẠO MỚI] baptt123/jobseekerfrontend/JobSeekerFrontEnd-develop/lib/views/login/user/cv_template_selection_screen.dart
-//
 import 'package:flutter/material.dart';
-import 'package:job_seeker_frontend/views/login/user/cv_generation_view_screen.dart'; // Màn hình nhập liệu
 
 class CvTemplateSelectionScreen extends StatelessWidget {
-  const CvTemplateSelectionScreen({Key? key}) : super(key: key);
+  const CvTemplateSelectionScreen({super.key});
+
+  final List<Map<String, String>> templates = const [
+    {'id': '1', 'name': 'Modern Blue', 'image': 'assets/images/cv_template_1.png'},
+    {'id': '2', 'name': 'Classic Grey', 'image': 'assets/images/cv_template_2.png'},
+    // {'id': '3', 'name': 'Professional', 'image': 'assets/images/cv_template_3.png'},
+    // {'id': '4', 'name': 'Creative', 'image': 'assets/images/cv_template_4.png'},
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Chọn Mẫu CV'),
-        backgroundColor: Colors.blue.shade800,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Chọn một mẫu CV để bắt đầu',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: ListView(
+      appBar: AppBar(title: const Text('Chọn mẫu CV')),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: templates.length,
+        itemBuilder: (context, index) {
+          final template = templates[index];
+          return GestureDetector(
+            onTap: () {
+              // Chuyển sang màn hình nhập liệu với templateId đã chọn
+              Navigator.pushNamed(context, '/cv_generation', arguments: template['id']);
+            },
+            child: Card(
+              elevation: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildTemplateCard(
-                    context,
-                    'Template 1 - Hiện đại',
-                    'assets/icon/cv_template_1.png', // Bạn cần thêm ảnh này vào assets
-                    'template1',
+                  Expanded(
+                    child: Container(
+                      color: Colors.grey[300],
+                      child: const Center(child: Icon(Icons.description, size: 50, color: Colors.grey)),
+                      // Sau này thay bằng: Image.asset(template['image']!, fit: BoxFit.cover),
+                    ),
                   ),
-                  SizedBox(height: 16),
-                  _buildTemplateCard(
-                    context,
-                    'Template 2 - Cổ điển 2 cột',
-                    'assets/icon/cv_template_2.png', // Bạn cần thêm ảnh này vào assets
-                    'template2',
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      template['name']!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTemplateCard(BuildContext context, String title, String imagePath, String templateId) {
-    return InkWell(
-      onTap: () {
-        // Chuyển sang màn hình Nhập Liệu (cv_generation_view_screen)
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CvGenerationViewScreen(templateId: templateId),
-          ),
-        );
-      },
-      child: Card(
-        elevation: 4,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Dùng ảnh bạn cung cấp
-            // Hãy đảm bảo bạn đã thêm 2 file ảnh vào 'assets/icon/'
-            // và khai báo trong pubspec.yaml
-            Image.asset(
-              imagePath,
-              height: 250,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Hiển thị nếu không tìm thấy ảnh
-                return Container(
-                  height: 250,
-                  color: Colors.grey[300],
-                  child: Center(child: Text('Không tìm thấy ảnh\n$imagePath', textAlign: TextAlign.center)),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                title,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

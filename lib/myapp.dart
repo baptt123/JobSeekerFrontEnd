@@ -1,25 +1,25 @@
 // lib/myapp.dart
-
 import 'package:flutter/material.dart';
-import 'package:job_seeker_frontend/utils/responsive_util.dart';
+import 'package:provider/provider.dart';
+import 'package:job_seeker_frontend/utils/app_colors.dart';
 import 'package:job_seeker_frontend/view_models/user/theme_view_model.dart';
-import 'package:job_seeker_frontend/views/login/test/scan_pdf_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/cv_generation_view_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/cv_template_selection_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart';
-// import 'package:job_seeker_frontend/views/login/user/home_screen.dart'; // Bỏ import cũ này nếu không dùng trực tiếp
+import 'package:job_seeker_frontend/utils/responsive_util.dart';
+
+// Import các màn hình (giữ nguyên như cũ của bạn)
+import 'package:job_seeker_frontend/views/login/user/splash_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/main_screen.dart'; // ✅ Import MainScreen
+import 'package:job_seeker_frontend/views/login/user/main_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/setting_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/scan_pdf_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/gemini_cv_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/notification_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/register_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/setting_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/splash_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/zoom_create_meeting_screen.dart';
-import 'package:provider/provider.dart';
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -28,41 +28,57 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeViewModel>(
       builder: (context, themeVM, child) {
         return MaterialApp(
-          title: 'Job Seeker App',
+          title: 'TechConnect',
           debugShowCheckedModeBanner: false,
-
-          // --- CẤU HÌNH THEME ---
           themeMode: themeVM.themeMode,
 
-          // 1. Theme Sáng (Light)
+          // --- CẤU HÌNH LIGHT THEME ---
           theme: ThemeData(
-            primarySwatch: Colors.teal,
+            useMaterial3: true,
             brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFF9F9F9),
+            primaryColor: AppColors.primary,
+            scaffoldBackgroundColor: AppColors.backgroundLight,
+            fontFamily: 'Inter',
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF00C89C),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
+              elevation: 0,
             ),
-            colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.teal)
-                .copyWith(secondary: const Color(0xFF0077B6)),
+            // ✅ FIX LỖI: Dùng CardThemeData
+            cardTheme: const CardThemeData(
+              color: AppColors.cardLight,
+              elevation: 2,
+              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            ),
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              secondary: AppColors.accent,
+              surface: AppColors.cardLight,
+            ),
           ),
 
-          // 2. Theme Tối (Dark)
+          // --- CẤU HÌNH DARK THEME ---
           darkTheme: ThemeData(
+            useMaterial3: true,
             brightness: Brightness.dark,
-            primaryColor: const Color(0xFF00C89C),
-            scaffoldBackgroundColor: const Color(0xFF121212),
+            primaryColor: AppColors.primary,
+            scaffoldBackgroundColor: AppColors.backgroundDark,
+            fontFamily: 'Inter',
             appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF1F1F1F),
+              backgroundColor: AppColors.backgroundDark,
               foregroundColor: Colors.white,
+              elevation: 0,
             ),
-            // ✅ ĐÃ SỬA LỖI: Dùng CardThemeData thay vì CardTheme
+            // ✅ FIX LỖI: Dùng CardThemeData
             cardTheme: const CardThemeData(
-              color: Color(0xFF303030),
+              color: AppColors.cardDark,
+              elevation: 2,
+              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             ),
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF00C89C),
-              secondary: Color(0xFF0077B6),
+              primary: AppColors.primary,
+              secondary: AppColors.accent,
+              surface: AppColors.cardDark,
             ),
           ),
 
@@ -72,19 +88,19 @@ class MyApp extends StatelessWidget {
 
           home: const SplashScreen(),
 
+          // Giữ nguyên Routes của bạn
           routes: {
             '/login': (_) => const LoginScreen(),
             '/home': (_) => const MainScreen(),
             '/settings': (_) => const SettingsScreen(),
-            '/zoom': (_) => const ZoomCreateMeetingScreen(),
             '/register': (_) => const RegisterScreen(),
             '/change_password': (_) => const ChangePasswordScreen(),
             '/forgot_password': (_) => const ForgotPasswordScreen(),
             '/search': (_) => const SearchScreen(),
             '/scan_pdf': (_) => const ScanPdfScreen(),
-            '/cv_generator': (_) => const CvTemplateSelectionScreen(),
+            '/cv_generator': (_) => const GeminiCvScreen(),
             '/save_job': (_) => const SavedJobsScreen(),
-            '/notification': (_) => NotificationScreen(),
+            '/notification': (_) => const NotificationScreen(),
             '/profile': (_) => const ProfileScreen(),
           },
         );

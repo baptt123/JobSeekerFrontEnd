@@ -5,7 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user-token-entity.dart';
 import '../utils/constant_api.dart';
-import '../utils/dio_client.dart'; // ✅ Đảm bảo import DioClient
+import '../utils/dio_client.dart';
 
 class FirebaseLoginService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -13,80 +13,60 @@ class FirebaseLoginService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // Sử dụng DioClient để có cấu hình chuẩn (timeout, base url)
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}/auth');
 
-  // --- 1. HÀM ĐĂNG NHẬP GOOGLE & LẤY ID TOKEN ---
+  // 1. Đăng nhập Google
   Future<String?> signInWithGoogle() async {
     try {
-      // Trigger flow chọn tài khoản Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // Người dùng hủy
 
-      // Lấy thông tin xác thực từ Google
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Tạo credential
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Đăng nhập vào Firebase
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
-
-      if (userCredential.user == null) {
-        throw Exception("Không lấy được user từ Firebase");
-      }
-
-      // Lấy ID Token string để gửi về backend
-      return await userCredential.user!.getIdToken();
+      return await userCredential.user?.getIdToken();
     } catch (e) {
       print("Lỗi Google Sign In: $e");
-      return null;
+      // Ném lỗi ra để ViewModel hiển thị Toast
+      throw Exception(e.toString());
     }
   }
 
-  // --- 2. HÀM LẤY TOKEN THẦM LẶNG (CHO AUTO LOGIN) ---
+  // 2. Lấy token thầm lặng (dùng cho Auto Login)
   Future<String?> getFirebaseTokenSilently() async {
     User? user = _auth.currentUser;
     if (user == null) return null;
     try {
-      // forceRefresh = true để đảm bảo token còn hạn
       return await user.getIdToken(true);
     } catch (e) {
-      print("Lỗi lấy token thầm lặng: $e");
       return null;
     }
   }
 
-  // --- 3. HÀM ĐĂNG XUẤT ---
+  // 3. Đăng xuất
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
       await _auth.signOut();
-    } catch (e) {
-      print("Lỗi đăng xuất Firebase: $e");
-    }
+    } catch (_) {}
   }
 
-  // --- 4. GỬI TOKEN LÊN BACKEND ĐỂ LẤY JWT HỆ THỐNG ---
+  // 4. Gửi token lên Backend
   Future<UserToken> loginWithGoogleToken(String firebaseToken) async {
     try {
       String? deviceToken;
       try {
         deviceToken = await _firebaseMessaging.getToken();
-      } catch (_) {} // Bỏ qua nếu lỗi lấy device token
+      } catch (_) {}
 
       final response = await _dio.post(
         '/firebase-login',
-        options: Options(
-          // Token này gửi ở Header để Guard của NestJS bắt được
-          headers: {'Authorization': 'Bearer $firebaseToken'},
-        ),
-        data: {
-          "deviceToken": deviceToken,
-        },
+        options: Options(headers: {'Authorization': 'Bearer $firebaseToken'}),
+        data: {"deviceToken": deviceToken},
       );
 
       final userToken = UserToken.fromJson(response.data);

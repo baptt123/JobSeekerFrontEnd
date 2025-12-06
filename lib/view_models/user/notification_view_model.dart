@@ -1,108 +1,103 @@
 // lib/view_models/user/notification_view_model.dart
-// (Cập nhật file này)
 
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // [IMPORT] FCM
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:job_seeker_frontend/models/notification-entity.dart';
 import 'package:job_seeker_frontend/services/firebase_messaging_service.dart';
 import 'package:job_seeker_frontend/services/notification_service.dart';
 
-// Enum để quản lý các trạng thái
-enum NotificationState { Initial, Loading, Loaded, Error }
+enum NotificationState { loading, loaded, error, unauthorized }
 
 class NotificationViewModel extends ChangeNotifier {
-  // Dependencies
   final NotificationService _notificationService = NotificationService();
   final FirebaseMessagingService _fcmService = FirebaseMessagingService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // State
-  NotificationState _state = NotificationState.Initial;
+  NotificationState _state = NotificationState.loading;
   List<NotificationEntity> _notifications = [];
   String _errorMessage = '';
-  String? _deviceToken;
+  int _unreadCount = 0; // [NEW] Biến đếm chưa đọc
 
-  // Getters
   NotificationState get state => _state;
   List<NotificationEntity> get notifications => _notifications;
   String get errorMessage => _errorMessage;
-  String? get deviceToken => _deviceToken;
+  int get unreadCount => _unreadCount;
 
-  // Giả sử bạn lấy user ID từ một service/provider khác
-  // Tạm thời hardcode
-  final int _currentUserId = 1;
-
+  // Constructor khởi tạo
   NotificationViewModel() {
     initialize();
   }
 
-  // Khởi tạo
+  // Hàm khởi tạo chính
   Future<void> initialize() async {
-    await _getDeviceToken();
+    // 1. Kiểm tra đăng nhập
+    final token = await _storage.read(key: 'accessToken');
+    if (token == null) {
+      _state = NotificationState.unauthorized;
+      notifyListeners();
+      return;
+    }
+
+    // 2. Lấy Device Token (để server có thể gửi noti)
+    await _fcmService.getDeviceToken();
+
+    // 3. Tải danh sách thông báo ban đầu
     await fetchNotifications();
 
-    // Lắng nghe các thông báo foreground
-    _fcmService.initialize((message) {
-      // Khi nhận được thông báo mới (foreground),
-      // tự động refresh lại danh sách
-      print("Foreground message received, refreshing list...");
+    // 4. [REAL-TIME] Lắng nghe thông báo mới khi App đang mở
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("🔔 Có thông báo mới: ${message.notification?.title}");
+
+      // Khi có thông báo mới -> Refresh lại danh sách API để đồng bộ
+      // (Hoặc có thể append thủ công vào list nếu muốn tối ưu API call)
       fetchNotifications();
     });
   }
 
-  // Lấy danh sách thông báo từ CSDL
   Future<void> fetchNotifications() async {
-    _setState(NotificationState.Loading);
+    // Chỉ set loading lần đầu tiên, các lần refresh ngầm không hiện loading
+    if (_notifications.isEmpty) {
+      _state = NotificationState.loading;
+      notifyListeners();
+    }
+
     try {
-      _notifications = await _notificationService.getNotificationsByUserId(_currentUserId);
-      _setState(NotificationState.Loaded);
+      // Giả sử service getNotificationsByUserId đã handle việc lấy userID từ token hoặc truyền vào
+      // Ở đây ta gọi API lấy list
+      // Lưu ý: Cần update Service để trả về List<NotificationEntity>
+      // Hoặc nếu Backend trả về {data: [], unreadCount: 5} thì parse tương ứng
+
+      // Tạm thời dùng logic client-side count nếu API chỉ trả list
+      // userId lấy từ token trong Service
+      // Ở đây ta truyền tạm 0, Service sẽ tự dùng DioClient có token
+      final result = await _notificationService.getNotificationsByUserId(0);
+
+      _notifications = result;
+      // Tính số lượng chưa đọc (client-side)
+      _unreadCount = _notifications.where((n) => n.isRead == false).length;
+
+      _state = NotificationState.loaded;
     } catch (e) {
-      _errorMessage = e.toString();
-      _setState(NotificationState.Error);
-    }
-  }
-
-  // Lấy FCM token
-  Future<void> _getDeviceToken() async {
-    _deviceToken = await _fcmService.getDeviceToken();
-    notifyListeners();
-  }
-
-  // Gửi thông báo TEST
-  Future<bool> sendTestNotification(String title, String body) async {
-    if (_deviceToken == null) {
-      _errorMessage = "Không thể lấy được device token.";
-      _setState(NotificationState.Error);
-      return false;
-    }
-
-    _setState(NotificationState.Loading);
-    try {
-      bool success = await _notificationService.sendTestNotification(
-        token: _deviceToken!,
-        title: title,
-        body: body,
-        userId: _currentUserId, // Gửi userId để backend lưu vào CSDL
-      );
-
-      if (success) {
-        // Nếu gửi thành công, đợi 1 giây rồi refresh lại danh sách
-        // để thấy thông báo mới vừa được lưu vào CSDL
-        await Future.delayed(Duration(seconds: 1));
-        await fetchNotifications(); // Tải lại danh sách
+      if (e.toString().contains("401")) {
+        _state = NotificationState.unauthorized;
       } else {
-        _errorMessage = "Gửi thông báo test thất bại.";
-        _setState(NotificationState.Error);
+        _errorMessage = e.toString();
+        _state = NotificationState.error;
       }
-      return success;
-    } catch (e) {
-      _errorMessage = e.toString();
-      _setState(NotificationState.Error);
-      return false;
+    } finally {
+      notifyListeners();
     }
   }
 
-  // Helper quản lý state
-  void _setState(NotificationState newState) {
-    _state = newState;
-    notifyListeners();
+  // Hàm đánh dấu đã đọc (Optional - Cần API backend hỗ trợ)
+  void markAsRead(int notificationId) {
+    final index = _notifications.indexWhere((n) => n.notificationId == notificationId);
+    if (index != -1) {
+      // _notifications[index].isRead = true; // Cần setter hoặc copyWith
+      _unreadCount = (_unreadCount > 0) ? _unreadCount - 1 : 0;
+      notifyListeners();
+      // Gọi API mark read ở đây...
+    }
   }
 }

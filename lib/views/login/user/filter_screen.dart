@@ -30,7 +30,6 @@ class _FilterScreenState extends State<FilterScreen> {
   @override
   void initState() {
     super.initState();
-    // Lấy giá trị bộ lọc hiện tại từ ViewModel để điền vào form
     final vm = context.read<HomeViewModel>();
     final currentFilter = vm.currentFilter;
 
@@ -51,41 +50,37 @@ class _FilterScreenState extends State<FilterScreen> {
     super.dispose();
   }
 
-  // Hàm xử lý Áp dụng
   void _applyFilters() {
     final vm = context.read<HomeViewModel>();
-
-    // Tạo DTO từ dữ liệu nhập
     final dto = FilterJobDto(
       location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
       salary_min: double.tryParse(_minSalaryController.text),
       salary_max: double.tryParse(_maxSalaryController.text),
       job_type: _selectedJobType,
     );
-
-    // Gọi ViewModel để lọc
     vm.applyFilter(dto);
-
-    // Đóng màn hình lọc
     Navigator.of(context).pop();
   }
 
-  // Hàm Xóa bộ lọc
   void _clearFilters() {
     final vm = context.read<HomeViewModel>();
-
-    // Reset về mặc định (Load lại danh sách ban đầu)
-    vm.fetchJobs();
-
+    vm.fetchInitialData();
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    // UI Bottom Sheet
+    // Lấy theme hiện tại để hỗ trợ Dark Mode
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Màu nền cho các input field
+    final inputFillColor = isDark ? Colors.grey[800] : Colors.white;
+    final chipBackgroundColor = isDark ? Colors.grey[800] : Colors.grey[100];
+
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom, // Tránh bàn phím che
+        bottom: MediaQuery.of(context).viewInsets.bottom,
         left: 20,
         right: 20,
         top: 10,
@@ -102,33 +97,38 @@ class _FilterScreenState extends State<FilterScreen> {
                 height: 5,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Colors.grey[400],
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
 
-            const Text(
+            Text(
               'Bộ Lọc Tìm Kiếm',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 24),
 
             // 1. Địa điểm
-            _buildSectionTitle('Địa điểm'),
+            _buildSectionTitle('Địa điểm', theme),
             TextField(
               controller: _locationController,
               decoration: InputDecoration(
                 hintText: 'Nhập thành phố (VD: Ho Chi Minh)',
-                prefixIcon: const Icon(Icons.location_on_outlined),
+                hintStyle: TextStyle(color: Colors.grey),
+                prefixIcon: Icon(Icons.location_on_outlined, color: theme.iconTheme.color),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: inputFillColor,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               ),
             ),
             const SizedBox(height: 20),
 
             // 2. Loại công việc (Chips)
-            _buildSectionTitle('Loại công việc'),
+            _buildSectionTitle('Loại công việc', theme),
             Wrap(
               spacing: 8.0,
               runSpacing: 0.0,
@@ -142,12 +142,15 @@ class _FilterScreenState extends State<FilterScreen> {
                       _selectedJobType = selected ? type : null;
                     });
                   },
+                  // Màu sắc tương thích Dark Mode
                   selectedColor: const Color(0xFF00C89C).withOpacity(0.2),
+                  backgroundColor: chipBackgroundColor,
                   labelStyle: TextStyle(
-                    color: isSelected ? const Color(0xFF00897B) : Colors.black,
+                    color: isSelected
+                        ? const Color(0xFF00897B)
+                        : theme.textTheme.bodyMedium?.color,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
-                  backgroundColor: Colors.grey[100],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: BorderSide(
@@ -160,7 +163,7 @@ class _FilterScreenState extends State<FilterScreen> {
             const SizedBox(height: 20),
 
             // 3. Mức lương (Range)
-            _buildSectionTitle('Mức lương (VND/USD)'),
+            _buildSectionTitle('Mức lương (VND/USD)', theme),
             Row(
               children: [
                 Expanded(
@@ -170,6 +173,8 @@ class _FilterScreenState extends State<FilterScreen> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
                       labelText: 'Thấp nhất',
+                      filled: true,
+                      fillColor: inputFillColor,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
@@ -185,6 +190,8 @@ class _FilterScreenState extends State<FilterScreen> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
                       labelText: 'Cao nhất',
+                      filled: true,
+                      fillColor: inputFillColor,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
@@ -201,10 +208,10 @@ class _FilterScreenState extends State<FilterScreen> {
                     onPressed: _clearFilters,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.grey[400]!),
+                      side: BorderSide(color: Colors.grey.shade400),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Xóa bộ lọc', style: TextStyle(color: Colors.black)),
+                    child: Text('Xóa bộ lọc', style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -228,12 +235,14 @@ class _FilterScreenState extends State<FilterScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

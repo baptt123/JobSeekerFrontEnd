@@ -5,120 +5,139 @@ import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/view_models/user/notification_view_model.dart';
 
 class NotificationScreen extends StatelessWidget {
+  const NotificationScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => NotificationViewModel(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Thông Báo'),
-          actions: [
-            // Nút để test
-            Consumer<NotificationViewModel>(
-              builder: (context, viewModel, child) {
-                return IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: () {
-                    _showSendTestDialog(context, viewModel);
-                  },
+    // [UPDATE] Dùng create: (_) => NotificationViewModel() ở đây nếu chưa có Provider toàn cục
+    // Tuy nhiên tốt nhất là NotificationViewModel được tạo ở main.dart để giữ trạng thái
+    // Nếu tạo mới mỗi lần vào màn hình, badge count ở Home sẽ không đồng bộ
+    // GIẢ ĐỊNH: Bạn đã khai báo NotificationViewModel trong main.dart
+
+    // Nếu chưa khai báo global, hãy dùng ChangeNotifierProvider.value hoặc tạo mới:
+    // return ChangeNotifierProvider(create: (_) => NotificationViewModel()..initialize(), ...);
+
+    // Dưới đây sử dụng Consumer trực tiếp (giả định đã có Provider ở trên cây widget)
+    // Nếu chưa có, bạn bọc Scaffold bằng ChangeNotifierProvider như code cũ.
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Thông Báo'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0.5,
+      ),
+      body: Consumer<NotificationViewModel>(
+        builder: (context, viewModel, child) {
+
+          // 1. Chưa đăng nhập
+          if (viewModel.state == NotificationState.unauthorized) {
+            return _buildGuestView(context, viewModel);
+          }
+
+          // 2. Loading
+          if (viewModel.state == NotificationState.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // 3. Lỗi
+          if (viewModel.state == NotificationState.error) {
+            return Center(child: Text('Lỗi: ${viewModel.errorMessage}'));
+          }
+
+          // 4. Rỗng
+          if (viewModel.notifications.isEmpty) {
+            return const Center(child: Text('Bạn chưa có thông báo nào.'));
+          }
+
+          // 5. Danh sách
+          return RefreshIndicator(
+            onRefresh: viewModel.fetchNotifications,
+            child: ListView.separated(
+              itemCount: viewModel.notifications.length,
+              separatorBuilder: (ctx, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final notification = viewModel.notifications[index];
+                return Container(
+                  color: notification.isRead
+                      ? Colors.white
+                      : const Color(0xFFE0F2F1), // Highlight tin chưa đọc
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFF00C89C).withOpacity(0.1),
+                      child: Icon(
+                        Icons.notifications,
+                        color: const Color(0xFF00C89C),
+                      ),
+                    ),
+                    title: Text(
+                      notification.title ?? 'Thông báo hệ thống',
+                      style: TextStyle(
+                        fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(notification.message ?? ''),
+                        const SizedBox(height: 6),
+                        Text(
+                          notification.createdAt.toString().substring(0, 16), // Format sơ bộ
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      // viewModel.markAsRead(notification.notificationId);
+                      // TODO: Điều hướng chi tiết
+                    },
+                  ),
                 );
               },
-            )
-          ],
-        ),
-        body: Consumer<NotificationViewModel>(
-          builder: (context, viewModel, child) {
-            // Hiển thị loading
-            if (viewModel.state == NotificationState.Loading && viewModel.notifications.isEmpty) {
-              return Center(child: CircularProgressIndicator());
-            }
-
-            // Hiển thị lỗi
-            if (viewModel.state == NotificationState.Error) {
-              return Center(child: Text('Lỗi: ${viewModel.errorMessage}'));
-            }
-
-            // Hiển thị danh sách rỗng
-            if (viewModel.notifications.isEmpty) {
-              return Center(child: Text('Bạn chưa có thông báo nào.'));
-            }
-
-            // Hiển thị danh sách thông báo
-            return RefreshIndicator(
-              onRefresh: viewModel.fetchNotifications,
-              child: ListView.builder(
-                itemCount: viewModel.notifications.length,
-                itemBuilder: (context, index) {
-                  final notification = viewModel.notifications[index];
-                  return ListTile(
-                    leading: Icon(
-                      notification.isRead ?? false
-                          ? Icons.notifications_none
-                          : Icons.notifications_active,
-                      color: notification.isRead ?? false
-                          ? Colors.grey
-                          : Theme.of(context).primaryColor,
-                    ),
-                    title: Text(notification.title ?? 'Không có tiêu đề'),
-                    subtitle: Text(notification.message ?? 'Không có nội dung'),
-                    trailing: Text(
-                      // Format thời gian (cần intl package)
-                      notification.createdAt?.toString() ?? '',
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  // Dialog để gửi thông báo test
-  void _showSendTestDialog(BuildContext context, NotificationViewModel viewModel) {
-    final titleController = TextEditingController(text: "Thông Báo Test");
-    final bodyController = TextEditingController(text: "Nội dung test từ app 🚀");
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Gửi Thông Báo Test'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  // Widget hiển thị cho khách
+  Widget _buildGuestView(BuildContext context, NotificationViewModel vm) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(labelText: 'Tiêu đề'),
+            Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey[300]),
+            const SizedBox(height: 20),
+            const Text(
+              "Vui lòng đăng nhập",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            TextField(
-              controller: bodyController,
-              decoration: InputDecoration(labelText: 'Nội dung'),
+            const SizedBox(height: 10),
+            const Text(
+              "Đăng nhập để xem các thông báo mới nhất về việc làm.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
             ),
-            SizedBox(height: 10),
-            Text(
-              'Token: ${viewModel.deviceToken ?? "Đang tải..."}',
-              style: TextStyle(fontSize: 10, color: Colors.grey),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/login').then((_) {
+                  vm.initialize(); // Refresh lại khi login xong
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00C89C),
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              child: const Text("Đăng nhập ngay", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            child: Text('Hủy'),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-          ElevatedButton(
-            child: Text('Gửi'),
-            onPressed: () async {
-              await viewModel.sendTestNotification(
-                titleController.text,
-                bodyController.text,
-              );
-              Navigator.of(ctx).pop(); // Đóng dialog sau khi gửi
-            },
-          ),
-        ],
       ),
     );
   }

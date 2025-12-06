@@ -18,7 +18,6 @@ import 'package:job_seeker_frontend/view_models/user/scan_pdf_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/search_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/theme_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/user_profile_view_model.dart';
-import 'package:job_seeker_frontend/view_models/user/zoom_view_model.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'myapp.dart';
@@ -47,7 +46,6 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
-        ChangeNotifierProvider(create: (_) => ZoomViewModel()),
         ChangeNotifierProvider(create: (_) => RegisterViewModel()),
         ChangeNotifierProvider(create: (_) => ChangePasswordViewModel()),
         ChangeNotifierProvider(create: (_) => ForgotPasswordViewModel()),

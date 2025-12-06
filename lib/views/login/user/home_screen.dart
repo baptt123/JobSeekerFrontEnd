@@ -1,10 +1,12 @@
+// lib/views/login/user/home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '../../../view_models/user/home_view_model.dart';
 import '../../../view_models/user/save_job_view_model.dart';
-import '../../../widget/user/home/home_header.dart';
+import '../../../widget/user/home/home_header.dart'; // Import file Header vừa sửa ở trên
 import 'conversation_list_screen.dart';
 import 'filter_screen.dart';
 import 'search_screen.dart';
@@ -22,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerController = PageController();
   int _currentBannerIndex = 0;
   Timer? _bannerTimer;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>(); // Key để mở Drawer
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -67,10 +69,26 @@ class _HomeScreenState extends State<HomeScreen> {
     final vm = context.watch<HomeViewModel>();
 
     return Scaffold(
-      key: _scaffoldKey, // Gán Key
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF9F9F9),
-      appBar: _buildAppBar(context, vm),
-      drawer: _buildDrawer(context, vm), // ✅ THÊM DRAWER
+      // Bỏ AppBar mặc định đi vì chúng ta đã có HomeHeader đẹp rồi
+      // Hoặc nếu muốn giữ nút Menu thì set background trong suốt
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent, // Trong suốt để thấy Header bên dưới
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list, color: Colors.white),
+            onPressed: () => _showFilterScreen(context),
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(context, vm),
       body: Stack(
         children: [
           _buildBody(context, vm),
@@ -84,56 +102,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ✅ WIDGET DRAWER MỚI
+  // ✅ DRAWER: Xử lý logic Đăng nhập / Đăng xuất
   Widget _buildDrawer(BuildContext context, HomeViewModel vm) {
+    final user = vm.currentUser;
+    final bool isUserLoggedIn = vm.isRecommendedMode; // Hoặc check user != null
+
     return Drawer(
       child: Column(
         children: [
+          // Drawer Header
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF00C89C)),
-            accountName: Text(vm.isRecommendedMode ? "Người dùng" : "Khách"),
-            accountEmail: Text(vm.currentEmail),
+            accountName: Text(
+              isUserLoggedIn ? (user?.fullName ?? "Người dùng") : "Khách",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            accountEmail: Text(isUserLoggedIn ? (user?.email ?? "") : "Vui lòng đăng nhập"),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Icon(Icons.person, size: 40, color: const Color(0xFF00C89C)),
+              backgroundImage: (isUserLoggedIn && user?.avatarUrl != null)
+                  ? NetworkImage(user!.avatarUrl!)
+                  : null,
+              child: (!isUserLoggedIn || user?.avatarUrl == null)
+                  ? const Icon(Icons.person, size: 40, color: Color(0xFF00C89C))
+                  : null,
             ),
           ),
 
-          // 1. Quét CV
+          // Menu Items chung
           ListTile(
             leading: const Icon(Icons.document_scanner, color: Colors.blue),
             title: const Text("Quét CV (Scan PDF)"),
             onTap: () {
-              Navigator.pop(context); // Đóng drawer
-              if (vm.isRecommendedMode) {
+              Navigator.pop(context);
+              if (isUserLoggedIn) {
                 Navigator.pushNamed(context, '/scan_pdf');
               } else {
                 _showLoginRequired(context);
               }
             },
           ),
-
-          // 2. Tạo CV Gemini
           ListTile(
             leading: const Icon(Icons.auto_awesome, color: Colors.purple),
             title: const Text("Tạo CV với Gemini AI"),
             onTap: () {
               Navigator.pop(context);
-              if (vm.isRecommendedMode) {
-                // Điều hướng đến trang Gemini CV (ví dụ: '/cv_gemini' hoặc '/cv_generator')
-                // Trong routes của bạn có: '/cv_generator' -> CvTemplateSelectionScreen
-                // và '/cv_gemini' -> chưa thấy trong routes nhưng có file 'gemini_cv_screen.dart'
-                // Giả sử dùng GeminiCvScreen:
+              if (isUserLoggedIn) {
                 Navigator.pushNamed(context, '/cv_generator');
               } else {
                 _showLoginRequired(context);
               }
             },
           ),
-
           const Divider(),
-
-          // 3. Cài đặt
           ListTile(
             leading: const Icon(Icons.settings, color: Colors.grey),
             title: const Text("Cài đặt"),
@@ -142,6 +163,41 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushNamed(context, '/settings');
             },
           ),
+
+          const Spacer(), // Đẩy phần Login/Logout xuống đáy
+          const Divider(),
+
+          // ✅ NÚT LOGIN / LOGOUT DỰA TRÊN TRẠNG THÁI
+          if (isUserLoggedIn)
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("Đăng xuất", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirm = await showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                        title: const Text("Đăng xuất"),
+                        content: const Text("Bạn có muốn đăng xuất?"),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Hủy")),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Đồng ý", style: TextStyle(color: Colors.red)))
+                        ]
+                    )
+                );
+                if (confirm == true) await vm.logout();
+              },
+            )
+          else
+            ListTile(
+              leading: const Icon(Icons.login, color: Color(0xFF00C89C)),
+              title: const Text("Đăng nhập", style: TextStyle(color: Color(0xFF00C89C), fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/login');
+              },
+            ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -149,41 +205,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showLoginRequired(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Vui lòng đăng nhập để sử dụng tính năng này")),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context, HomeViewModel vm) {
-    return AppBar(
-      backgroundColor: const Color(0xFF00C89C),
-      elevation: 0,
-      // Thêm nút Menu để mở Drawer
-      leading: IconButton(
-        icon: const Icon(Icons.menu, color: Colors.white),
-        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      SnackBar(
+        content: const Text("Vui lòng đăng nhập để sử dụng tính năng này"),
+        action: SnackBarAction(
+          label: 'Đăng nhập',
+          onPressed: () => Navigator.pushNamed(context, '/login'),
+        ),
       ),
-      title: const Text('Job Seeker',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      iconTheme: const IconThemeData(color: Colors.white),
-      actions: [
-        IconButton(icon: const Icon(Icons.filter_list), onPressed: () => _showFilterScreen(context)),
-
-        if (vm.isRecommendedMode)
-          IconButton(icon: const Icon(Icons.chat_bubble_outline), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversationListScreen()))),
-
-        if (!vm.isRecommendedMode)
-          Padding(padding: const EdgeInsets.only(right: 8.0), child: TextButton.icon(onPressed: () => Navigator.pushNamed(context, '/login'), icon: const Icon(Icons.login, color: Colors.white), label: const Text('Đăng nhập', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), style: TextButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))))),
-
-        if (vm.isRecommendedMode)
-          IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Đăng xuất',
-              onPressed: () async {
-                final confirm = await showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text("Đăng xuất"), content: const Text("Bạn có muốn đăng xuất?"), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Hủy")), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Đồng ý", style: TextStyle(color: Colors.red)))]));
-                if (confirm == true) await vm.logout();
-              }
-          ),
-      ],
     );
   }
 
@@ -200,9 +228,14 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              HomeHeader(userName: vm.currentEmail),
+              // ✅ Header mới xử lý cả Login/Guest
+              HomeHeader(user: vm.currentUser),
+
+              // Search Bar đè lên
               Positioned(
-                top: 100, left: 20, right: 20,
+                bottom: 0, // Đặt ở đáy của Header (do padding bottom header lớn)
+                left: 20,
+                right: 20,
                 child: GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
                   child: _buildFakeSearchBar(),
@@ -210,33 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 50),
+
+          const SizedBox(height: 30), // Khoảng cách sau SearchBar
 
           // Banner Slider
-          const SizedBox(height: 20),
           _buildBannerSection(),
-
-          const SizedBox(height: 20),
-
-          // ✅ MENU NHANH (SHORTCUTS) - Thêm phần này để truy cập nhanh ngoài Drawer
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildShortcutItem(Icons.document_scanner, "Scan CV", Colors.blue, () {
-                  if (vm.isRecommendedMode) Navigator.pushNamed(context, '/scan_pdf');
-                  else _showLoginRequired(context);
-                }),
-                _buildShortcutItem(Icons.auto_awesome, "AI CV", Colors.purple, () {
-                  if (vm.isRecommendedMode) Navigator.pushNamed(context, '/cv_generator');
-                  else _showLoginRequired(context);
-                }),
-                _buildShortcutItem(Icons.settings, "Cài đặt", Colors.orange, () => Navigator.pushNamed(context, '/settings')),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Tiêu đề danh sách
           Padding(
@@ -270,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-          // Loading More Indicator
+          // Loading More
           if (vm.state == HomeState.loadingMore)
             const Padding(
               padding: EdgeInsets.all(20.0),
@@ -283,28 +295,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget Shortcut Item (Icon tròn + Text)
-  Widget _buildShortcutItem(IconData icon, String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-        ],
+  // --- Các hàm phụ trợ (FakeSearch, Banner, JobItem) giữ nguyên như cũ ---
+  Widget _buildFakeSearchBar() {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 5))
+          ]
+      ),
+      child: Row(
+          children: [
+            const Icon(Icons.search, color: Color(0xFF00C89C)),
+            const SizedBox(width: 12),
+            Text('Tìm kiếm việc làm, công ty...', style: TextStyle(color: Colors.grey[500], fontSize: 14))
+          ]
       ),
     );
   }
 
-  // (Giữ nguyên _buildBannerSection, _buildJobItem, _buildTag, _buildFakeSearchBar, _showFilterScreen)
   Widget _buildBannerSection() {
     return SizedBox(
       height: 160,
@@ -397,7 +409,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 56, height: 56,
                 decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
                 padding: const EdgeInsets.all(4),
-                child: hasLogo ? Image.network(logoUrl, fit: BoxFit.contain, errorBuilder: (context, error, stackTrace) => Icon(Icons.business, color: Colors.grey[400], size: 30)) : Icon(Icons.business, color: Colors.grey[400], size: 30),
+                child: hasLogo
+                    ? Image.network(logoUrl, fit: BoxFit.contain, errorBuilder: (context, error, stackTrace) => Icon(Icons.business, color: Colors.grey[400], size: 30))
+                    : Icon(Icons.business, color: Colors.grey[400], size: 30),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -440,15 +454,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Flexible(child: Text(text, style: TextStyle(color: Colors.grey[700], fontSize: 11), overflow: TextOverflow.ellipsis)),
         ],
       ),
-    );
-  }
-
-  Widget _buildFakeSearchBar() {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16.0), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 5))]),
-      child: Row(children: [Icon(Icons.search, color: const Color(0xFF00C89C)), const SizedBox(width: 12), Text('Tìm kiếm việc làm, công ty...', style: TextStyle(color: Colors.grey[500], fontSize: 15))]),
     );
   }
 

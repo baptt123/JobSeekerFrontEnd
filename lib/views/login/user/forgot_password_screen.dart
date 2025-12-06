@@ -1,129 +1,66 @@
-// views/forgot_password_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../../view_models/user/forgot_password_view_model.dart';
+import '../../../utils/app_colors.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Sử dụng ChangeNotifierProvider để cung cấp ViewModel cho cây widget
     return ChangeNotifierProvider(
       create: (_) => ForgotPasswordViewModel(),
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          leading: const BackButton(color: Colors.white),
         ),
-        body: Consumer<ForgotPasswordViewModel>(
-          builder: (context, viewModel, child) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
-                key: viewModel.formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Quên Mật Khẩu',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Vui lòng nhập email của bạn để nhận mật khẩu mới.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    // Bạn có thể thêm ảnh minh họa ở đây
-                    // Image.asset('assets/your_image.png'),
-                    Center(
-                      child: Image.asset(
-                        'assets/icon/job search.jpg', // Ảnh minh họa tương tự
-                        height: 250,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
+        body: Container(
+          decoration: const BoxDecoration(gradient: AppColors.loginGradient),
+          padding: const EdgeInsets.all(24),
+          child: Consumer<ForgotPasswordViewModel>(
+            builder: (context, vm, _) => Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_reset, size: 80, color: AppColors.accent),
+                const SizedBox(height: 24),
+                const Text("Reset Password", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 8),
+                const Text("Enter your email to receive reset instructions.", textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 40),
 
-                    // Trường nhập Email
-                    TextFormField(
-                      controller: viewModel.emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        prefixIcon: const Icon(Icons.email_outlined),
-                      ),
-                      validator: viewModel.validateEmail,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Hiển thị thông báo lỗi hoặc thành công
-                    if (viewModel.errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Text(
-                          viewModel.errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-
-                    if (viewModel.successMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Text(
-                          viewModel.successMessage!,
-                          style: const TextStyle(color: Colors.green, fontSize: 14),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-
-                    // Nút Gửi
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E8E8E), // Màu xanh giống trong ảnh
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: viewModel.isLoading
-                            ? null
-                            : viewModel.submitForgotPassword,
-                        child: viewModel.isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                          'Gửi Yêu Cầu',
-                          style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.white
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                TextField(
+                  controller: vm.emailController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    hintText: "Email Address",
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                    prefixIcon: const Icon(Icons.email, color: Colors.white54),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 24),
+
+                if (vm.successMessage != null) Text(vm.successMessage!, style: const TextStyle(color: Colors.greenAccent)),
+                if (vm.errorMessage != null) Text(vm.errorMessage!, style: const TextStyle(color: Colors.redAccent)),
+
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: vm.isLoading ? null : vm.submitForgotPassword,
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: vm.isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("Send Link", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                )
+              ],
+            ),
+          ),
         ),
       ),
     );

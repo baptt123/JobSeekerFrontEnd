@@ -1,9 +1,8 @@
-// views/chat/conversation_list_screen.dart (TẠO FILE MỚI)
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/user/conversation_list_view_model.dart';
-import 'message_screen.dart'; // Import màn hình chat CHI TIẾT
+import '../../../utils/app_colors.dart';
+import 'message_screen.dart';
 
 class ConversationListScreen extends StatelessWidget {
   const ConversationListScreen({Key? key}) : super(key: key);
@@ -13,51 +12,29 @@ class ConversationListScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => ConversationListViewModel(),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Tin nhắn'),
-        ),
+        appBar: AppBar(title: const Text("Messages"), centerTitle: true),
         body: Consumer<ConversationListViewModel>(
-          builder: (context, vm, child) {
-            if (vm.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          builder: (context, vm, _) {
+            if (vm.state == ConversationState.loading) return const Center(child: CircularProgressIndicator());
+            if (vm.state == ConversationState.unauthorized) return const Center(child: Text("Please login"));
 
-            if (vm.error.isNotEmpty) {
-              return Center(child: Text(vm.error));
-            }
-
-            if (vm.users.isEmpty) {
-              return const Center(child: Text('Không tìm thấy user nào.'));
-            }
-
-            // Hiển thị danh sách
-            return ListView.builder(
+            return ListView.separated(
               itemCount: vm.users.length,
-              itemBuilder: (context, index) {
-                final user = vm.users[index];
-
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
+              itemBuilder: (ctx, i) {
+                final user = vm.users[i];
                 return ListTile(
+                  contentPadding: const EdgeInsets.all(16),
                   leading: CircleAvatar(
-                    backgroundImage: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
-                        ? NetworkImage(user.avatarUrl!)
-                        : const AssetImage('assets/icon/default_avatar.png') as ImageProvider, // Thêm avatar mặc định
+                    radius: 28,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                    child: user.avatarUrl == null ? Text(user.fullName[0]) : null,
                   ),
-                  title: Text(user.fullName),
-                  subtitle: Text(user.email),
-                  onTap: () {
-                    // ✅ ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT
-                    // Điều hướng động, không còn fix cứng
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MessageScreen(
-                          otherUserId: user.id, // ID động
-                          otherUserName: user.fullName, // Tên động
-                          otherUserAvatar: user.avatarUrl ?? '', // Avatar động
-                        ),
-                      ),
-                    );
-                  },
+                  title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text("Tap to chat", style: TextStyle(color: Colors.grey)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MessageScreen(otherUserId: user.id, otherUserName: user.fullName, otherUserAvatar: user.avatarUrl ?? ''))),
                 );
               },
             );

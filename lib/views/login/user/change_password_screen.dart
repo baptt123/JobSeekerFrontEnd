@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/view_models/user/change_password_view_model.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/change_password_view_model.dart';
-import '../../../widget/user/password_text_field.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -11,124 +10,82 @@ class ChangePasswordScreen extends StatefulWidget {
 }
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
-  bool _isOldPasswordVisible = false;
-  bool _isNewPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
+  final _formKey = GlobalKey<FormState>();
+  final _oldPassController = TextEditingController();
+  final _newPassController = TextEditingController();
+  final _confirmPassController = TextEditingController();
+
+  @override
+  void dispose() {
+    _oldPassController.dispose();
+    _newPassController.dispose();
+    _confirmPassController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Sử dụng ChangeNotifierProvider để cung cấp ViewModel cho cây widget
-    return ChangeNotifierProvider(
-      create: (_) => ChangePasswordViewModel(),
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: const Icon(Icons.arrow_back, color: Colors.black),
-        ),
-        body: Consumer<ChangePasswordViewModel>(
-          builder: (context, vm, child) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Form(
-                key: vm.formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Đổi mật khẩu',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Hãy nhập mật khẩu cũ và mật khẩu mới của bạn để cập nhật thông tin.',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                    ),
-                    const SizedBox(height: 40),
-                    // Bạn có thể thêm ảnh vào đây
-                    // Image.asset('assets/your_image.png', height: 200),
-                    const SizedBox(height: 40),
+    final authViewModel = Provider.of<ChangePasswordViewModel>(context);
 
-                    // Old Password Field
-                    PasswordTextField(
-                      controller: vm.oldPasswordController,
-                      labelText: 'Mật khẩu cũ',
-                      isVisible: _isOldPasswordVisible,
-                      toggleVisibility: () {
-                        setState(() {
-                          _isOldPasswordVisible = !_isOldPasswordVisible;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // New Password Field
-                    PasswordTextField(
-                      controller: vm.newPasswordController,
-                      labelText: 'Mật khẩu mới',
-                      isVisible: _isNewPasswordVisible,
-                      toggleVisibility: () {
-                        setState(() {
-                          _isNewPasswordVisible = !_isNewPasswordVisible;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Confirm New Password Field
-                    PasswordTextField(
-                        controller: vm.confirmPasswordController,
-                        labelText: 'Xác nhận mật khẩu mới',
-                        isVisible: _isConfirmPasswordVisible,
-                        toggleVisibility: () {
-                          setState(() {
-                            _isConfirmPasswordVisible =
-                            !_isConfirmPasswordVisible;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Làm ơn xác nhận mật khẩu mới';
-                          }
-                          if (value != vm.newPasswordController.text) {
-                            return 'Mật khẩu không khớp';
-                          }
-                          return null;
-                        }),
-
-                    const SizedBox(height: 40),
-
-                    // Save Button
-                    SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed:
-                        vm.isLoading ? null : () => vm.updatePassword(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E8C83), // Teal color
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: vm.isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                          'Save',
-                          style: TextStyle(
-                              fontSize: 18, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Đổi mật khẩu')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _oldPassController,
+                decoration: const InputDecoration(labelText: 'Mật khẩu cũ', border: OutlineInputBorder()),
+                obscureText: true,
+                validator: (value) => value!.isEmpty ? 'Vui lòng nhập mật khẩu cũ' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _newPassController,
+                decoration: const InputDecoration(labelText: 'Mật khẩu mới', border: OutlineInputBorder()),
+                obscureText: true,
+                validator: (value) => (value!.length < 6) ? 'Mật khẩu phải hơn 6 ký tự' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPassController,
+                decoration: const InputDecoration(labelText: 'Xác nhận mật khẩu mới', border: OutlineInputBorder()),
+                obscureText: true,
+                validator: (value) {
+                  if (value != _newPassController.text) return 'Mật khẩu không khớp';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: authViewModel.isLoading
+                      ? null
+                      : () async {
+                    if (_formKey.currentState!.validate()) {
+                      // Gọi hàm changePassword từ ViewModel (bạn cần implement hàm này trong AuthViewModel)
+                      /* bool success = await authViewModel.changePassword(
+                              _oldPassController.text,
+                              _newPassController.text
+                            );
+                            if (success && context.mounted) Navigator.pop(context);
+                            */
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Chức năng đang được cập nhật trong ViewModel')),
+                      );
+                    }
+                  },
+                  child: authViewModel.isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Cập nhật mật khẩu'),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
