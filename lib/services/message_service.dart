@@ -1,12 +1,13 @@
-// services/chat_service.dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../models/message-entity.dart';
-import '../utils/constant_api.dart'; // Dùng lại file constant của bạn
+import '../utils/constant_api.dart';
 
 class MessageService {
   IO.Socket? _socket;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  // Callbacks để cập nhật UI
   final Function(MessageEntity) onMessageReceived;
   final Function(MessageEntity) onMessageSentConfirmed;
   final Function(List<MessageEntity>) onConversationLoaded;
@@ -22,28 +23,30 @@ class MessageService {
   Future<void> connect() async {
     final accessToken = await _storage.read(key: 'accessToken');
     if (accessToken == null) {
-      print("ChatService: No access token found.");
+      print("❌ ChatService: No access token found.");
       return;
     }
 
-    // Khởi tạo socket
+    // Cấu hình Socket.IO Client
     _socket = IO.io(
-        ConstantAPI.baseUrl, // Địa chỉ backend của bạn (ví dụ: http://192.168.1.10:3000)
+        ConstantAPI.baseUrl,
         IO.OptionBuilder()
-            .setTransports(['websocket'])
+            .setTransports(['websocket']) // Bắt buộc dùng websocket để ổn định
             .disableAutoConnect()
+        // 🔥 QUAN TRỌNG: Gửi token vào Header để NestJS Gateway xác thực
             .setExtraHeaders({
-          'Authorization': 'Bearer $accessToken', // Gửi JWT để xác thực
+          'Authorization': 'Bearer $accessToken',
         })
             .build());
 
-    // Đăng ký các sự kiện lắng nghe từ server
+    // --- LẮNG NGHE SỰ KIỆN ---
+
     _socket?.onConnect((_) {
-      print('Socket connected: ${_socket?.id}');
+      print('✅ Socket connected: ${_socket?.id}');
     });
 
     _socket?.on('connected', (data) {
-      print('Server acknowledged connection. User ID: ${data['userId']}');
+      print('✅ Server acknowledged connection. User ID: ${data['userId']}');
       onUserConnected(data['userId'] as int);
     });
 
@@ -53,7 +56,7 @@ class MessageService {
     });
 
     _socket?.on('messageSent', (data) {
-      // Server xác nhận đã nhận và lưu tin nhắn
+      // Server xác nhận tin nhắn đã được lưu DB
       final message = MessageEntity.fromJson(data);
       onMessageSentConfirmed(message);
     });
@@ -65,19 +68,19 @@ class MessageService {
       onConversationLoaded(messages);
     });
 
-    _socket?.onDisconnect((_) => print('Socket disconnected'));
-    _socket?.onError((data) => print('Socket error: $data'));
+    _socket?.onDisconnect((_) => print('❌ Socket disconnected'));
+    _socket?.onError((data) => print('⚠️ Socket error: $data'));
 
     // Bắt đầu kết nối
     _socket?.connect();
   }
 
-  // Gửi tin nhắn đi
+  // Gửi tin nhắn
   void sendMessage(Map<String, dynamic> messageData) {
     _socket?.emit('sendMessage', messageData);
   }
 
-  // Yêu cầu tải lịch sử chat
+  // Tải lịch sử chat
   void loadConversation(int otherUserId) {
     _socket?.emit('loadConversation', {
       'otherUserId': otherUserId,

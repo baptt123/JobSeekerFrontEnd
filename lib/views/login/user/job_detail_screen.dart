@@ -382,8 +382,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   }
 
   Widget _buildBottomAction(BuildContext context, JobDetailViewModel vm, JobEntity job) {
-    final recruiter = job.recruiter;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -393,17 +391,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
       child: SafeArea(
         child: Row(
           children: [
-            // Nút Chat
+            // --- NÚT CHAT VỚI NHÀ TUYỂN DỤNG ---
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
-                  if (recruiter == null) {
+                  // 1. Lấy thông tin Recruiter từ Job Entity
+                  // (Phải đảm bảo API GetJobDetail đã join với bảng User để trả về field 'recruiter')
+                  final recruiter = job.recruiter;
+
+                  if (recruiter == null || recruiter.id == 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Không tìm thấy thông tin nhà tuyển dụng.")),
+                      const SnackBar(content: Text("Thông tin người tuyển dụng không khả dụng.")),
                     );
                     return;
                   }
-                  // Chuyển sang màn hình Chat
+
+                  // 2. Chuyển sang màn hình Chat
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -425,16 +428,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                 ),
               ),
             ),
+
             const SizedBox(width: 16),
 
             // Nút Ứng tuyển
             Expanded(
               child: ElevatedButton(
-                // Nếu đã ứng tuyển -> Disable nút
-                // Nếu chưa -> Mở BottomSheet
-                onPressed: vm.isApplied
-                    ? null
-                    : () => _showApplyBottomSheet(context, vm),
+                onPressed: vm.isApplied ? null : () => _showApplyBottomSheet(context, vm),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
                   disabledBackgroundColor: Colors.grey[300],
@@ -443,10 +443,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                 ),
                 child: Text(
                   vm.isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay",
-                  style: TextStyle(
-                    color: vm.isApplied ? Colors.grey : Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: vm.isApplied ? Colors.grey : Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
