@@ -43,4 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# --- CẤU HÌNH BẢO MẬT & FIREBASE (ĐÃ THÊM MỚI) ---
+# Chặn file cấu hình môi trường
+.env
+
+# Chặn file cấu hình Firebase chung
 /firebase.json
+
+# Chặn file cấu hình Firebase cho Dart/Flutter (thường nằm trong lib/)
+firebase_options.dart
+lib/firebase_options.dart
