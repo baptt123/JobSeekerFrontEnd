@@ -29,14 +29,20 @@ class LoginService {
     }
   }
 
-  // 2. AUTO LOGIN (Giữ nguyên logic riêng để check Refresh Token lúc mở app)
+  // 2. AUTO LOGIN (CẬP NHẬT: Thêm Timeout và Xử lý lỗi mạng)
   Future<UserToken?> tryAutoLogin() async {
     final refreshToken = await _storage.read(key: 'refreshToken');
     if (refreshToken == null) return null;
 
     try {
-      // Dùng Dio() thường để tránh vòng lặp interceptor của DioClient
-      final dio = Dio(BaseOptions(baseUrl: '${ConstantAPI.baseUrl}/auth'));
+      // ✅ CẬP NHẬT: Thiết lập timeout ngắn (ví dụ 5 giây)
+      // Để nếu mạng lag hoặc server sập thì không bắt user đợi lâu
+      final dio = Dio(BaseOptions(
+        baseUrl: '${ConstantAPI.baseUrl}/auth',
+        connectTimeout: const Duration(seconds: 5), // Quá 5s không kết nối được -> Hủy
+        receiveTimeout: const Duration(seconds: 5), // Quá 5s không nhận được data -> Hủy
+      ));
+
       final response = await dio.post(
         '/refresh',
         data: {'refreshToken': refreshToken},
@@ -47,7 +53,20 @@ class LoginService {
         await _saveTokens(token);
         return token;
       }
+    } on DioException catch (e) {
+      // ✅ XỬ LÝ THÔNG MINH:
+      // - Nếu lỗi 400/401 (Token sai/hết hạn) -> Xóa token để đăng nhập lại
+      if (e.response?.statusCode == 400 || e.response?.statusCode == 401) {
+        await logout();
+      }
+      // - Nếu lỗi Mạng (Timeout, Server Die...) -> KHÔNG làm gì cả (Return null)
+      //   App sẽ tự hiểu là không auto login được và chuyển người dùng vào màn hình chính (Guest Mode)
+      //   mà không bị kẹt lại màn hình Splash.
+      else {
+        print("⚠️ Lỗi kết nối khi Auto Login: ${e.message}. Vào App với chế độ Khách/Offline.");
+      }
     } catch (e) {
+      // Lỗi khác không xác định -> Logout cho an toàn
       await logout();
     }
     return null;

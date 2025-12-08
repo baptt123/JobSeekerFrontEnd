@@ -60,4 +60,13 @@ class JobService {
     final response = await _dio.get('/suggest', queryParameters: {'q': query});
     return List<String>.from(response.data);
   }
+  // [THÊM MỚI] Lấy thông tin công ty và list jobs
+  Future<Map<String, dynamic>> getCompanyWithJobs(int companyId) async {
+    try {
+      final response = await _dio.get('/company/$companyId/jobs');
+      return response.data['data'] ?? {};
+    } catch (e) {
+      throw Exception('Lỗi lấy thông tin công ty: $e');
+    }
+  }
 }

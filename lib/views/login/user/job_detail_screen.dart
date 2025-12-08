@@ -1,11 +1,11 @@
-// lib/views/login/user/job_detail_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
-// import màn hình chat...
+import 'message_screen.dart';
+import 'company_detail_screen.dart'; // Import màn hình chi tiết công ty
 
+// Màu chủ đạo
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class JobDetailScreen extends StatefulWidget {
@@ -23,7 +23,37 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
+    // 2 Tab: Chi tiết & Công ty
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // --- Hàm mở Popup Ứng tuyển ---
+  void _showApplyBottomSheet(BuildContext parentContext, JobDetailViewModel vm) {
+    // 1. Gọi API lấy danh sách CV ngay khi mở popup
+    vm.fetchMyCvs();
+
+    showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true, // Cho phép popup full chiều cao khi bàn phím hiện
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (BuildContext context) {
+        // Dùng ChangeNotifierProvider.value để truyền ViewModel hiện tại xuống BottomSheet
+        return ChangeNotifierProvider.value(
+          value: vm,
+          child: Padding(
+            // Padding để tránh bàn phím che mất nút submit
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: const ApplyJobForm(),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -34,6 +64,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
         builder: (context, vm, _) {
           final job = vm.job;
 
+          // 1. Loading
           if (vm.isLoading) {
             return const Scaffold(
               backgroundColor: Colors.white,
@@ -41,16 +72,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             );
           }
 
+          // 2. Error / Not Found
           if (job == null) {
             return _buildErrorState(context);
           }
 
+          // 3. Success UI
           return Scaffold(
             body: NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
                   SliverAppBar(
-                    expandedHeight: 240.0, // 🔥 Tăng chiều cao Header để chứa ảnh to hơn
+                    expandedHeight: 220.0,
                     floating: false,
                     pinned: true,
                     backgroundColor: kPrimaryColor,
@@ -58,6 +91,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
+                    actions: [
+                      // Nút Save Job
+                      IconButton(
+                        icon: Icon(
+                          vm.isSaved ? Icons.bookmark : Icons.bookmark_border,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => vm.toggleSaveJob(context),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.share, color: Colors.white),
+                        onPressed: () {},
+                      ),
+                    ],
                     flexibleSpace: FlexibleSpaceBar(
                       background: _buildHeaderContent(job),
                     ),
@@ -71,7 +118,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                         indicatorColor: kPrimaryColor,
                         indicatorWeight: 3,
                         tabs: const [
-                          Tab(text: "Thông tin"),
+                          Tab(text: "Chi tiết"),
                           Tab(text: "Công ty"),
                         ],
                       ),
@@ -95,11 +142,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
-  // 🔥 FIX 1 & 2: Xử lý lỗi ảnh và Tăng kích thước
+  // --- Widgets con ---
+
   Widget _buildHeaderContent(JobEntity job) {
-    // Logic kiểm tra link ảnh hợp lệ
     String? logoUrl = job.company?.logoUrl;
-    bool isValidUrl = logoUrl != null && logoUrl.isNotEmpty && logoUrl.toLowerCase().startsWith('http');
+    bool isValidUrl = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
+
+    // Lấy ID công ty để điều hướng
+    final companyId = job.company?.companyId;
 
     return Container(
       decoration: const BoxDecoration(
@@ -108,100 +158,181 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             begin: Alignment.topCenter, end: Alignment.bottomCenter
         ),
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              // 🔥 Tăng kích thước từ 80 lên 110
-              width: 110,
-              height: 110,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20), // Bo góc mềm mại hơn
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
-                  ]
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 🔥 LOGO CÔNG TY (BẤM ĐỂ XEM CHI TIẾT)
+              GestureDetector(
+                onTap: () {
+                  if (companyId != null) {
+                    // Navigate sang CompanyDetailScreen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CompanyDetailScreen(
+                          companyId: companyId,
+                          companyName: job.company?.name ?? "Company",
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  width: 80, height: 80,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
+                    ],
+                  ),
+                  child: isValidUrl
+                      ? Image.network(
+                    logoUrl!,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 40, color: Colors.grey),
+                  )
+                      : const Icon(Icons.business, size: 40, color: Colors.grey),
+                ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: isValidUrl
-                    ? Image.network(
-                  logoUrl,
-                  fit: BoxFit.contain,
-                  // Xử lý nếu link http bị chết (404)
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.business, size: 50, color: Colors.grey);
-                  },
-                )
-                    : const Icon(Icons.business, size: 50, color: Colors.grey), // Hiển thị icon nếu url không hợp lệ
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                job.company?.name ?? "Công ty ẩn danh",
+
+              const SizedBox(height: 12),
+
+              // Tên Job
+              Text(
+                job.title,
                 style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-            )
-          ],
+
+              const SizedBox(height: 4),
+
+              // Tên Công ty
+              Text(
+                job.company?.name ?? "Công ty ẩn danh",
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildJobInfo(JobEntity job) {
+    // Ưu tiên hiển thị skills từ API, nếu không có thì parse requirements
+    List<String> displayTags = job.skills.isNotEmpty
+        ? job.skills
+        : (job.requirements?.split(', ') ?? []);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(job.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-          const SizedBox(height: 12),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                child: Text("\$${job.salaryMin} - \$${job.salaryMax}", style: const TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: _buildDetailBox(
+                  icon: Icons.attach_money,
+                  text: (job.salaryMin != null && job.salaryMax != null)
+                      ? "\$${job.salaryMin} - \$${job.salaryMax}"
+                      : "Thỏa thuận",
+                  color: Colors.green,
+                ),
               ),
-              const SizedBox(width: 10),
-              Expanded( // Thêm Expanded để tránh lỗi tràn màn hình nếu địa chỉ dài
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                  child: Row(children: [
-                    const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Flexible(child: Text(job.location ?? "Remote", style: const TextStyle(fontSize: 14, color: Colors.black54), overflow: TextOverflow.ellipsis)),
-                  ]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDetailBox(
+                  icon: Icons.work,
+                  text: job.jobType ?? "Full-time",
+                  color: Colors.blue,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailBox(
+                  icon: Icons.location_on,
+                  text: job.location ?? "Remote",
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDetailBox(
+                  icon: Icons.calendar_today,
+                  text: job.deadline != null
+                      ? "Hạn: ${job.deadline!.day}/${job.deadline!.month}"
+                      : "Không thời hạn",
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
+
           const SizedBox(height: 24),
           const Text("Mô tả công việc", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text(job.description ?? '', style: const TextStyle(height: 1.6, fontSize: 15)),
+          Text(job.description ?? 'Chưa có mô tả chi tiết.', style: const TextStyle(height: 1.6, fontSize: 15, color: Colors.black87)),
+
           const SizedBox(height: 24),
-          const Text("Yêu cầu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(job.requirements ?? '', style: const TextStyle(height: 1.6, fontSize: 15)),
+
+          if (displayTags.isNotEmpty) ...[
+            const Text("Kỹ năng yêu cầu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: displayTags.map((tag) => Chip(
+                backgroundColor: kPrimaryColor.withOpacity(0.05),
+                side: const BorderSide(color: kPrimaryColor),
+                label: Text(tag, style: const TextStyle(color: kPrimaryColor, fontWeight: FontWeight.w500)),
+              )).toList(),
+            ),
+          ],
+
           const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  Widget _buildCompanyInfo(JobEntity job) {
-    final company = job.company;
-    if (company == null) return const Center(child: Text("Không có thông tin công ty"));
+  Widget _buildDetailBox({required IconData icon, required String text, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildCompanyInfo(JobEntity job) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -209,16 +340,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
         children: [
           const Text("Thông tin doanh nghiệp", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          _buildCompanyDetailRow(Icons.business, "Tên công ty", company.name ?? "N/A"),
+          _buildCompanyDetailRow(Icons.business, "Tên công ty", job.company?.name ?? "N/A"),
           const SizedBox(height: 12),
-          _buildCompanyDetailRow(Icons.map, "Địa chỉ", company.address ?? "Chưa cập nhật"),
+          _buildCompanyDetailRow(Icons.map, "Địa chỉ", job.company?.address ?? "Chưa cập nhật"),
           const SizedBox(height: 12),
-          _buildCompanyDetailRow(Icons.language, "Website", company.website ?? "Chưa cập nhật"),
+          _buildCompanyDetailRow(Icons.language, "Website", job.company?.website ?? "Chưa cập nhật"),
+
           const Divider(height: 40),
+
           const Text("Giới thiệu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Text(
-            company.description ?? "Chưa có mô tả chi tiết.",
+            job.company?.description ?? "Chưa có giới thiệu.",
             style: const TextStyle(height: 1.5, fontSize: 15, color: Colors.black87),
             textAlign: TextAlign.justify,
           ),
@@ -249,52 +382,72 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   }
 
   Widget _buildBottomAction(BuildContext context, JobDetailViewModel vm, JobEntity job) {
+    final recruiter = job.recruiter;
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
+      ),
       child: SafeArea(
         child: Row(
           children: [
+            // Nút Chat
             Expanded(
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.chat_bubble_outline, size: 20),
                 onPressed: () {
-                  // Uncomment và sửa lại cho đúng với navigation của bạn
-                  /*
-                   Navigator.push(
+                  if (recruiter == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Không tìm thấy thông tin nhà tuyển dụng.")),
+                    );
+                    return;
+                  }
+                  // Chuyển sang màn hình Chat
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ChatDetailScreen(
-                        partnerId: job.company?.id,
-                        partnerName: job.company?.name,
-                        partnerAvatar: job.company?.logoUrl,
+                      builder: (context) => MessageScreen(
+                        otherUserId: recruiter.id,
+                        otherUserName: recruiter.fullName,
+                        otherUserAvatar: recruiter.avatarUrl ?? "",
                       ),
                     ),
                   );
-                  */
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Chuyển sang màn hình chat...")),
-                  );
                 },
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text("Chat ngay", style: TextStyle(fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: kPrimaryColor),
                   padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: kPrimaryColor),
                   foregroundColor: kPrimaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                label: const Text("Chat ngay", style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(width: 16),
+
+            // Nút Ứng tuyển
             Expanded(
               child: ElevatedButton(
-                onPressed: vm.isApplied ? null : () => vm.applyForJob(context),
+                // Nếu đã ứng tuyển -> Disable nút
+                // Nếu chưa -> Mở BottomSheet
+                onPressed: vm.isApplied
+                    ? null
+                    : () => _showApplyBottomSheet(context, vm),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
+                  disabledBackgroundColor: Colors.grey[300],
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text(vm.isApplied ? "Đã ứng tuyển" : "Ứng tuyển", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(
+                  vm.isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay",
+                  style: TextStyle(
+                    color: vm.isApplied ? Colors.grey : Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -339,4 +492,167 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
+}
+
+// Widget Form Ứng Tuyển (Bottom Sheet)
+class ApplyJobForm extends StatefulWidget {
+  const ApplyJobForm({super.key});
+
+  @override
+  State<ApplyJobForm> createState() => _ApplyJobFormState();
+}
+
+class _ApplyJobFormState extends State<ApplyJobForm> {
+  int? _selectedCvId;
+  final TextEditingController _coverLetterController = TextEditingController();
+
+  @override
+  void dispose() {
+    _coverLetterController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Lấy ViewModel từ context cha
+    final vm = context.watch<JobDetailViewModel>();
+
+    // Tự động chọn CV mặc định nếu chưa chọn cái nào
+    if (!vm.isLoadingCvs && vm.myCvs.isNotEmpty && _selectedCvId == null) {
+      Future.microtask(() {
+        if (mounted) {
+          // Tìm CV mặc định hoặc lấy cái đầu tiên
+          final defaultCv = vm.myCvs.firstWhere((cv) => cv.isDefault, orElse: () => vm.myCvs.first);
+          setState(() {
+            _selectedCvId = defaultCv.cvId;
+          });
+        }
+      });
+    }
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75, // Chiếm 75% màn hình
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          ),
+          const SizedBox(height: 20),
+
+          const Text("Ứng tuyển công việc", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+
+          // 1. Chọn CV
+          const Text("Chọn hồ sơ (CV)", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 10),
+
+          Expanded(
+            child: vm.isLoadingCvs
+                ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
+                : vm.myCvs.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Bạn chưa có CV nào.", style: TextStyle(color: Colors.grey)),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/manage_cv');
+                    },
+                    child: const Text("Tải lên CV ngay", style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)),
+                  )
+                ],
+              ),
+            )
+                : ListView.builder(
+              itemCount: vm.myCvs.length,
+              itemBuilder: (context, index) {
+                final cv = vm.myCvs[index];
+                final isSelected = _selectedCvId == cv.cvId;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: isSelected ? kPrimaryColor : Colors.grey.shade300, width: isSelected ? 2 : 1),
+                    borderRadius: BorderRadius.circular(12),
+                    color: isSelected ? kPrimaryColor.withOpacity(0.05) : Colors.white,
+                  ),
+                  child: RadioListTile<int>(
+                    title: Text(cv.title ?? "CV không tên", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                      cv.isDefault ? "Mặc định • ${cv.createdAt.toString().substring(0, 10)}" : "Ngày tải: ${cv.createdAt.toString().substring(0, 10)}",
+                      style: TextStyle(color: cv.isDefault ? kPrimaryColor : Colors.grey),
+                    ),
+                    value: cv.cvId,
+                    groupValue: _selectedCvId,
+                    activeColor: kPrimaryColor,
+                    onChanged: (val) => setState(() => _selectedCvId = val),
+                    secondary: const Icon(Icons.description, color: Colors.redAccent),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // 2. Thư giới thiệu
+          const Text("Thư giới thiệu (Tùy chọn)", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _coverLetterController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: "Viết vài dòng để gây ấn tượng...",
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: kPrimaryColor)),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 3. Nút Submit
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: (vm.isApplying || vm.myCvs.isEmpty || _selectedCvId == null)
+                  ? null
+                  : () async {
+                final success = await vm.submitApplication(context, _selectedCvId, _coverLetterController.text);
+                if (success && mounted) {
+                  Navigator.pop(context); // Đóng popup
+                  _showSuccessDialog(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: vm.isApplying
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Gửi hồ sơ", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(BuildContext context) {
+    showDialog(context: context, builder: (_) => AlertDialog(
+      title: const Column(children: [Icon(Icons.check_circle, color: Colors.green, size: 60), SizedBox(height: 10), Text("Thành công!")]),
+      content: const Text("Hồ sơ ứng tuyển của bạn đã được gửi.", textAlign: TextAlign.center),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Đóng"))],
+    ));
+  }
 }

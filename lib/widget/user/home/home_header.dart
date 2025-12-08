@@ -1,9 +1,10 @@
+// lib/widget/user/home/home_header.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/user-entity.dart';
 import '../../../../view_models/user/notification_view_model.dart';
 
-// ĐỊNH NGHĨA MÀU CHỦ ĐẠO (TÍM)
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class HomeHeader extends StatelessWidget {
@@ -13,16 +14,19 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kiểm tra xem có user không
     final bool isGuest = user == null;
-    final String name = user?.fullName ?? "Khách";
+    final String name = user?.fullName ?? "";
     final String? avatar = user?.avatarUrl;
 
+    // Kiểm tra URL avatar hợp lệ
+    final bool isValidAvatar = avatar != null &&
+        avatar.isNotEmpty &&
+        avatar.startsWith('http');
+
     return Container(
-      // Padding bottom lớn (80) để search bar có thể đè lên
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
       decoration: const BoxDecoration(
-        color: kPrimaryColor, // ✅ Đổi sang màu Tím
+        color: kPrimaryColor,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
       child: SafeArea(
@@ -34,27 +38,31 @@ class HomeHeader extends StatelessWidget {
               onTap: () {
                 if (isGuest) Navigator.pushNamed(context, '/login');
               },
-              child: CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.white,
-                backgroundImage: (avatar != null && !isGuest)
-                    ? NetworkImage(avatar)
-                    : null,
-                child: (avatar == null || isGuest)
-                    ? const Icon(Icons.person, color: kPrimaryColor) // ✅ Icon tím
-                    : null,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.grey[200],
+                  backgroundImage: (isValidAvatar && !isGuest)
+                      ? NetworkImage(avatar!)
+                      : null,
+                  child: (!isValidAvatar || isGuest)
+                      ? const Icon(Icons.person, color: Colors.grey)
+                      : null,
+                ),
               ),
             ),
             const SizedBox(width: 16),
 
-            // --- TEXT INFO ---
+            // --- TÊN USER / KHÁCH ---
             Expanded(
               child: isGuest
-                  ? _buildGuestInfo(context)
-                  : _buildUserInfo(name),
+                  ? _buildGuestHeader(context)
+                  : _buildUserHeader(name),
             ),
 
-            // --- NOTIFICATION ICON ---
+            // --- NOTIFICATION ICON (🔥 Logic Badge mới) ---
             if (!isGuest)
               Consumer<NotificationViewModel>(
                 builder: (_, vm, __) => Stack(
@@ -72,13 +80,18 @@ class HomeHeader extends StatelessWidget {
                         padding: const EdgeInsets.all(8),
                       ),
                     ),
+                    // ✅ Chỉ hiện Badge khi có thông báo chưa đọc
                     if (vm.unreadCount > 0)
                       Positioned(
                         right: -2,
                         top: -2,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.fromBorderSide(BorderSide(color: Colors.white, width: 1.5)) // Viền trắng cho đẹp
+                          ),
                           child: Text(
                               '${vm.unreadCount}',
                               style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
@@ -94,49 +107,33 @@ class HomeHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildUserInfo(String name) {
+  Widget _buildUserHeader(String name) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text("Chào mừng trở lại,", style: TextStyle(color: Colors.white70, fontSize: 14)),
+        const Text("Chào mừng,", style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(height: 4),
-        Text(
-            name,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis
-        ),
+        Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
       ],
     );
   }
 
-  Widget _buildGuestInfo(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text("Bạn chưa đăng nhập?", style: TextStyle(color: Colors.white70, fontSize: 14)),
-        const SizedBox(height: 4),
-        GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/login'),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              "Đăng nhập / Đăng ký",
-              style: TextStyle(
-                  color: kPrimaryColor, // ✅ Chữ màu Tím
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14
-              ),
-            ),
-          ),
+  Widget _buildGuestHeader(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.pushNamed(context, '/login'),
+        icon: const Icon(Icons.login, size: 18, color: kPrimaryColor),
+        label: const Text("Đăng nhập ngay", style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: kPrimaryColor,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
-      ],
+      ),
     );
   }
 }

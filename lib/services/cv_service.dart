@@ -1,3 +1,5 @@
+// lib/services/cv_service.dart
+
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
@@ -9,48 +11,23 @@ import '../utils/dio_client.dart';
 class CvGenerationService {
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}/cv');
 
+  // --- 1. Tạo CV bằng AI (Prompt) ---
   Future<Uint8List> generateCv(String prompt) async {
-    final response = await _dio.post(
-      '/gen-cv',
-      data: {'prompt': prompt},
-      options: Options(responseType: ResponseType.bytes),
-    );
-    return response.data as Uint8List;
-  }
-
-  Future<String> previewCv(String templateId, CreateCvDto cvData) async {
-    final response = await _dio.post(
-      '/preview/$templateId',
-      data: cvData.toJson(),
-      options: Options(responseType: ResponseType.plain),
-    );
-    return response.data;
-  }
-
-  Future<Response> downloadCv(String templateId, CreateCvDto cvData) async {
-    return await _dio.post(
-      '/download/$templateId',
-      data: cvData.toJson(),
-      options: Options(
-        responseType: ResponseType.bytes,
-        validateStatus: (status) => status != null,
-      ),
-    );
-  }
-
-  // [NEW] Lấy danh sách CV
-  Future<List<UserCVEntity>> getMyCvs() async {
     try {
-      final response = await _dio.get('/my-cvs');
-      return (response.data['data'] as List)
-          .map((json) => UserCVEntity.fromJson(json))
-          .toList();
-    } catch (e) {
-      throw Exception('Lỗi lấy danh sách CV: $e');
+      final response = await _dio.post(
+        '/gen-cv',
+        data: {'prompt': prompt},
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+      return Uint8List.fromList(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.statusMessage ?? 'Lỗi kết nối hoặc tạo CV');
     }
   }
 
-  // [NEW] Upload CV
   Future<void> uploadCv(File file, String title) async {
     try {
       String fileName = file.path.split('/').last;
@@ -64,21 +41,40 @@ class CvGenerationService {
     }
   }
 
-  // [NEW] Đặt mặc định
-  Future<void> setDefaultCv(int cvId) async {
+  // Preview CV (Trả về file PDF dưới dạng bytes)
+  Future<Uint8List> previewCvPdf(String templateId, CreateCvDto cvData) async {
     try {
-      await _dio.patch('/$cvId/set-default');
-    } catch (e) {
-      throw Exception('Lỗi đặt mặc định: $e');
+      final response = await _dio.post(
+        '/preview/$templateId',
+        data: cvData.toJson(),
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data);
+    } on DioException catch (e) {
+      throw Exception('Lỗi tạo bản xem trước: ${e.message}');
     }
   }
 
-  // [NEW] Xóa CV
-  Future<void> deleteCv(int cvId) async {
+  // Lưu CV
+  Future<void> saveGeneratedCv(String templateId, CreateCvDto cvData) async {
     try {
-      await _dio.delete('/$cvId');
-    } catch (e) {
-      throw Exception('Lỗi xóa CV: $e');
+      await _dio.post('/save-generated/$templateId', data: cvData.toJson());
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Lỗi khi lưu CV');
     }
   }
+
+  // Lấy danh sách CV
+  Future<List<UserCVEntity>> getMyCvs() async {
+    final response = await _dio.get('/my-cvs');
+    return (response.data['data'] as List)
+        .map((json) => UserCVEntity.fromJson(json))
+        .toList();
+  }
+
+  // Các hàm khác giữ nguyên (setDefaultCv, deleteCv...)
+  Future<void> setDefaultCv(int cvId) async =>
+      await _dio.patch('/$cvId/set-default');
+
+  Future<void> deleteCv(int cvId) async => await _dio.delete('/$cvId');
 }

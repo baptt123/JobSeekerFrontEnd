@@ -1,4 +1,4 @@
-// lib/views/home/filter_screen.dart
+// lib/views/login/user/filter_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,9 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
 import '../../../dto/filter_job_dto.dart';
 
-// 🔥 Định nghĩa màu chủ đạo (Tím)
 const Color kPrimaryColor = Color(0xFF6C63FF);
-const Color kDarkPrimaryColor = Color(0xFF5F27CD);
+const Color kSurfaceColor = Color(0xFFF8F9FE);
 
 class FilterScreen extends StatefulWidget {
   const FilterScreen({Key? key}) : super(key: key);
@@ -18,20 +17,12 @@ class FilterScreen extends StatefulWidget {
 }
 
 class _FilterScreenState extends State<FilterScreen> {
-  // Controllers
   late TextEditingController _locationController;
   late TextEditingController _minSalaryController;
   late TextEditingController _maxSalaryController;
-
-  // Biến chọn Job Type
   String? _selectedJobType;
-  final List<String> _jobTypes = [
-    'Full-time',
-    'Part-time',
-    'Internship',
-    'Contract',
-    'Freelance'
-  ];
+
+  final List<String> _jobTypes = ['Full-time', 'Part-time', 'Internship', 'Contract', 'Freelance'];
 
   @override
   void initState() {
@@ -40,11 +31,8 @@ class _FilterScreenState extends State<FilterScreen> {
     final currentFilter = vm.currentFilter;
 
     _locationController = TextEditingController(text: currentFilter.location);
-    _minSalaryController = TextEditingController(
-        text: currentFilter.salary_min != null ? currentFilter.salary_min.toString() : '');
-    _maxSalaryController = TextEditingController(
-        text: currentFilter.salary_max != null ? currentFilter.salary_max.toString() : '');
-
+    _minSalaryController = TextEditingController(text: currentFilter.salary_min?.toString() ?? '');
+    _maxSalaryController = TextEditingController(text: currentFilter.salary_max?.toString() ?? '');
     _selectedJobType = currentFilter.job_type;
   }
 
@@ -69,202 +57,149 @@ class _FilterScreenState extends State<FilterScreen> {
   }
 
   void _clearFilters() {
-    final vm = context.read<HomeViewModel>();
-    vm.fetchInitialData();
+    context.read<HomeViewModel>().fetchInitialData();
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Lấy theme hiện tại để hỗ trợ Dark Mode
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Màu nền cho các input field
-    final inputFillColor = isDark ? Colors.grey[800] : Colors.white;
-    final chipBackgroundColor = isDark ? Colors.grey[800] : Colors.grey[100];
-
-    return Padding(
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
-        top: 10,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 24,
+        right: 24,
+        top: 12,
       ),
       child: SingleChildScrollView(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Thanh gạt nhỏ phía trên
+            // Handle Bar
             Center(
               child: Container(
-                width: 40,
+                width: 48,
                 height: 5,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            Text(
-              'Bộ Lọc Tìm Kiếm',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 24),
 
-            // 1. Địa điểm
-            _buildSectionTitle('Địa điểm', theme),
-            TextField(
-              controller: _locationController,
-              decoration: InputDecoration(
-                hintText: 'Nhập thành phố (VD: Ho Chi Minh)',
-                hintStyle: const TextStyle(color: Colors.grey),
-                prefixIcon: Icon(Icons.location_on_outlined, color: theme.iconTheme.color),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder( // Viền khi focus màu Tím
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kPrimaryColor, width: 2),
-                ),
-                filled: true,
-                fillColor: inputFillColor,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              ),
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Bộ lọc tìm kiếm", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: _clearFilters,
+                  child: const Text("Đặt lại", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                )
+              ],
             ),
-            const SizedBox(height: 20),
+            const Divider(height: 30),
 
-            // 2. Loại công việc (Chips)
-            _buildSectionTitle('Loại công việc', theme),
+            // 1. Địa điểm
+            _buildSectionLabel("Địa điểm"),
+            const SizedBox(height: 8),
+            _buildInputField(
+              controller: _locationController,
+              hint: "VD: Ho Chi Minh, Ha Noi",
+              icon: Icons.location_on_outlined,
+            ),
+            const SizedBox(height: 24),
+
+            // 2. Mức lương
+            _buildSectionLabel("Mức lương (USD)"),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(child: _buildInputField(controller: _minSalaryController, hint: "Min", isNumber: true)),
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text("-", style: TextStyle(fontSize: 20, color: Colors.grey))),
+                Expanded(child: _buildInputField(controller: _maxSalaryController, hint: "Max", isNumber: true)),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // 3. Loại hình công việc
+            _buildSectionLabel("Loại hình công việc"),
+            const SizedBox(height: 12),
             Wrap(
-              spacing: 8.0,
-              runSpacing: 0.0,
+              spacing: 10,
+              runSpacing: 10,
               children: _jobTypes.map((type) {
                 final isSelected = _selectedJobType == type;
                 return ChoiceChip(
                   label: Text(type),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedJobType = selected ? type : null;
-                    });
-                  },
-                  // 🔥 UPDATED: Màu nền khi chọn (Tím nhạt)
-                  selectedColor: kPrimaryColor.withOpacity(0.2),
-                  backgroundColor: chipBackgroundColor,
                   labelStyle: TextStyle(
-                    // 🔥 UPDATED: Màu chữ khi chọn (Tím đậm)
-                    color: isSelected
-                        ? kDarkPrimaryColor
-                        : theme.textTheme.bodyMedium?.color,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.white : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   ),
+                  selected: isSelected,
+                  onSelected: (selected) => setState(() => _selectedJobType = selected ? type : null),
+                  selectedColor: kPrimaryColor,
+                  backgroundColor: kSurfaceColor,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      // 🔥 UPDATED: Viền khi chọn (Tím)
-                      color: isSelected ? kPrimaryColor : Colors.transparent,
-                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: isSelected ? kPrimaryColor : Colors.transparent),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
 
-            // 3. Mức lương (Range)
-            _buildSectionTitle('Mức lương (VND/USD)', theme),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _minSalaryController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      labelText: 'Thấp nhất',
-                      filled: true,
-                      fillColor: inputFillColor,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: kPrimaryColor, width: 2),
-                      ),
-                      floatingLabelStyle: const TextStyle(color: kPrimaryColor),
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10),
-                  child: Text('-', style: TextStyle(fontSize: 20, color: Colors.grey)),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _maxSalaryController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(
-                      labelText: 'Cao nhất',
-                      filled: true,
-                      fillColor: inputFillColor,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: kPrimaryColor, width: 2),
-                      ),
-                      floatingLabelStyle: const TextStyle(color: kPrimaryColor),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 40),
 
-            // 4. Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _clearFilters,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Colors.grey.shade400),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text('Xóa bộ lọc', style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
-                  ),
+            // 4. Button Áp dụng
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _applyFilters,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPrimaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 8,
+                  shadowColor: kPrimaryColor.withOpacity(0.4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _applyFilters,
-                    style: ElevatedButton.styleFrom(
-                      // 🔥 UPDATED: Nền nút Áp dụng màu Tím
-                      backgroundColor: kPrimaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Áp dụng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
+                child: const Text("Áp dụng bộ lọc", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
             ),
-            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Text(
-        title,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
+  Widget _buildSectionLabel(String text) {
+    return Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87));
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String hint,
+    IconData? icon,
+    bool isNumber = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: kSurfaceColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly] : [],
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[400]),
+          prefixIcon: icon != null ? Icon(icon, color: Colors.grey[600], size: 20) : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );

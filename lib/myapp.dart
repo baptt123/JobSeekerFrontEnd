@@ -1,5 +1,7 @@
 // lib/myapp.dart
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/utils/global_keys.dart';
+import 'package:job_seeker_frontend/views/login/user/cv_preview_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/manage_cv_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/utils/app_colors.dart';
@@ -29,6 +31,7 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeViewModel>(
       builder: (context, themeVM, child) {
         return MaterialApp(
+          navigatorKey: ManagingGlobalKey.navigatorKey,
           title: 'TechConnect',
           debugShowCheckedModeBanner: false,
           themeMode: themeVM.themeMode,
@@ -104,6 +107,7 @@ class MyApp extends StatelessWidget {
             '/notification': (_) => const NotificationScreen(),
             '/profile': (_) => const ProfileScreen(),
             '/manage_cv': (_) => const ManageCvScreen(),
+            '/cv_preview': (_) => const CvPreviewScreen(),
           },
         );
       },

@@ -1,3 +1,5 @@
+// lib/views/login/user/register_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/user/register_view_model.dart';
@@ -12,10 +14,16 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Các Controllers để quản lý dữ liệu nhập
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  // Biến trạng thái để ẩn/hiện mật khẩu
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
@@ -27,15 +35,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _submitForm() async {
+    // Ẩn bàn phím khi người dùng bấm nút đăng ký
+    FocusScope.of(context).unfocus();
+
     if (_formKey.currentState!.validate()) {
       final success = await context.read<RegisterViewModel>().register(
-        fullName: _fullNameController.text,
-        email: _emailController.text,
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Success! Please Login.'), backgroundColor: Colors.green));
-        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
+                backgroundColor: Colors.green
+            )
+        );
+        Navigator.pop(context); // Quay về màn hình đăng nhập
       }
     }
   }
@@ -55,7 +72,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.loginGradient),
+        decoration: const BoxDecoration(
+          gradient: AppColors.loginGradient, // Giữ nguyên màu nền Gradient cũ
+        ),
         height: double.infinity,
         child: SafeArea(
           child: SingleChildScrollView(
@@ -64,25 +83,85 @@ class _RegisterScreenState extends State<RegisterScreen> {
               key: _formKey,
               child: Column(
                 children: [
-                  const Text("Create Account", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Text(
+                      "Tạo tài khoản",
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)
+                  ),
                   const SizedBox(height: 8),
-                  const Text("Join TechConnect today!", style: TextStyle(fontSize: 16, color: Colors.white70)),
+                  const Text(
+                      "Tham gia TechConnect ngay hôm nay!",
+                      style: TextStyle(fontSize: 16, color: Colors.white70)
+                  ),
                   const SizedBox(height: 40),
 
-                  _buildInput(_fullNameController, "Full Name", Icons.person_outline),
+                  // 1. Họ và tên
+                  _buildInput(
+                    controller: _fullNameController,
+                    label: "Họ và tên",
+                    icon: Icons.person_outline,
+                    validator: (val) => (val == null || val.trim().isEmpty) ? 'Vui lòng nhập họ tên' : null,
+                  ),
                   const SizedBox(height: 16),
-                  _buildInput(_emailController, "Email", Icons.email_outlined),
+
+                  // 2. Email (Có regex check định dạng)
+                  _buildInput(
+                    controller: _emailController,
+                    label: "Email",
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) return 'Vui lòng nhập email';
+                      // Kiểm tra định dạng email cơ bản
+                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(val)) {
+                        return 'Email không hợp lệ';
+                      }
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 16),
-                  _buildInput(_passwordController, "Password", Icons.lock_outline, isPass: true),
+
+                  // 3. Mật khẩu (Có check độ dài > 6 ký tự như backend yêu cầu)
+                  _buildInput(
+                    controller: _passwordController,
+                    label: "Mật khẩu",
+                    icon: Icons.lock_outline,
+                    isPassword: true,
+                    isVisible: _isPasswordVisible,
+                    onToggleVisibility: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Vui lòng nhập mật khẩu';
+                      if (val.length < 6) return 'Mật khẩu phải từ 6 ký tự trở lên';
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 16),
-                  _buildInput(_confirmPasswordController, "Confirm Password", Icons.lock_outline, isPass: true),
+
+                  // 4. Xác nhận mật khẩu (Kiểm tra khớp với mật khẩu trên)
+                  _buildInput(
+                    controller: _confirmPasswordController,
+                    label: "Xác nhận mật khẩu",
+                    icon: Icons.lock_outline,
+                    isPassword: true,
+                    isVisible: _isConfirmPasswordVisible,
+                    onToggleVisibility: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) return 'Vui lòng xác nhận mật khẩu';
+                      if (val != _passwordController.text) return 'Mật khẩu không khớp';
+                      return null;
+                    },
+                  ),
 
                   const SizedBox(height: 32),
 
+                  // Hiển thị thông báo lỗi từ ViewModel (nếu có)
                   if (vm.errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(vm.errorMessage!, style: const TextStyle(color: Colors.redAccent)),
+                      child: Text(
+                        vm.errorMessage!,
+                        style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
 
                   SizedBox(
@@ -95,8 +174,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: vm.isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Sign Up", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ? const SizedBox(
+                          width: 24, height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      )
+                          : const Text(
+                          "Đăng ký",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
+                      ),
                     ),
                   ),
                 ],
@@ -108,7 +193,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildInput(TextEditingController controller, String label, IconData icon, {bool isPass = false}) {
+  // Widget ô nhập liệu (Input field)
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+    bool isVisible = false, // Trạng thái hiển thị mật khẩu
+    VoidCallback? onToggleVisibility, // Hàm bật/tắt hiển thị mật khẩu
+    String? Function(String?)? validator,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -116,17 +211,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          obscureText: isPass,
+          obscureText: isPassword && !isVisible, // Logic ẩn hiện mật khẩu
+          keyboardType: keyboardType,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white.withOpacity(0.05),
             prefixIcon: Icon(icon, color: Colors.white54),
+            // Thêm nút con mắt nếu là trường mật khẩu
+            suffixIcon: isPassword
+                ? IconButton(
+              icon: Icon(
+                isVisible ? Icons.visibility : Icons.visibility_off,
+                color: Colors.white54,
+              ),
+              onPressed: onToggleVisibility,
+            )
+                : null,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            hintText: "Enter $label",
+            // Thêm viền khi focus để dễ nhìn hơn
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 1.5)
+            ),
+            // Kiểu chữ cho thông báo lỗi
+            errorStyle: const TextStyle(color: Colors.redAccent),
+            hintText: "Nhập $label",
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
           ),
-          validator: (val) => (val == null || val.isEmpty) ? 'Required' : null,
+          validator: validator,
         ),
       ],
     );

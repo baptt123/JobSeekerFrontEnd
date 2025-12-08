@@ -1,7 +1,7 @@
-import 'package:job_seeker_frontend/dto/skill_dto.dart';
-
+// lib/dto/create_cv_dto.dart (Cập nhật đầy đủ)
 import 'education_dto.dart';
 import 'experience_dto.dart';
+import 'skill_dto.dart';
 
 class CreateCvDto {
   final String fullName;

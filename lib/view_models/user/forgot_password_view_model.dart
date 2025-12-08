@@ -1,14 +1,12 @@
-// viewmodels/forgot_password_viewmodel.dart
+// lib/view_models/user/forgot_password_view_model.dart
 
 import 'package:flutter/material.dart';
-import 'package:job_seeker_frontend/services/forgot_password_service.dart';
 import '../../dto/forgot_password_dto.dart';
+import '../../services/forgot_password_service.dart';
 
 class ForgotPasswordViewModel extends ChangeNotifier {
-  final ForgotPasswordService _authService = ForgotPasswordService();
-
+  final ForgotPasswordService _service = ForgotPasswordService();
   final TextEditingController emailController = TextEditingController();
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -19,56 +17,46 @@ class ForgotPasswordViewModel extends ChangeNotifier {
   String? _successMessage;
   String? get successMessage => _successMessage;
 
-  // ... (các hàm _setLoading, _setErrorMessage, _setSuccessMessage không đổi)
-
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
-  void _setErrorMessage(String? message) {
-    _errorMessage = message;
-    notifyListeners();
-  }
-
-  void _setSuccessMessage(String? message) {
-    _successMessage = message;
-    notifyListeners();
+  // Validate Email cơ bản ở Client
+  bool get isValidEmail {
+    final email = emailController.text.trim();
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
   }
 
   Future<void> submitForgotPassword() async {
-    _setErrorMessage(null);
-    _setSuccessMessage(null);
+    // Reset trạng thái
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
 
-    if (formKey.currentState?.validate() ?? false) {
-      _setLoading(true);
-      try {
-        // 2. Tạo đối tượng DTO từ dữ liệu trong controller
-        final forgotPasswordDto = ForgotPasswordDto(
-          email: emailController.text.trim(),
-        );
+    // 1. Check validate Client
+    if (!isValidEmail) {
+      _errorMessage = "Vui lòng nhập đúng định dạng email.";
+      notifyListeners();
+      return;
+    }
 
-        // 3. Gọi service với DTO vừa tạo
-        final message = await _authService.forgotPassword(forgotPasswordDto);
-        _setSuccessMessage(message);
-      } catch (e) {
-        _setErrorMessage(e.toString());
-      } finally {
-        _setLoading(false);
-      }
-    }
-  }
+    _isLoading = true;
+    notifyListeners();
 
-  // ... (hàm validateEmail và dispose không đổi)
-  String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Vui lòng nhập email của bạn.';
+    try {
+      // 2. Gọi API Backend
+      final dto = ForgotPasswordDto(email: emailController.text.trim());
+
+      // Nếu thành công, hàm này trả về message từ backend
+      final message = await _service.forgotPassword(dto);
+
+      // ✅ Hiển thị thông báo thành công (Màu xanh)
+      _successMessage = message;
+      emailController.clear(); // Xóa ô nhập để tránh spam
+
+    } catch (e) {
+      // ❌ Hiển thị thông báo lỗi (Màu đỏ) - Lỗi này lấy từ Service (VD: Email không tồn tại)
+      _errorMessage = e.toString().replaceAll("Exception: ", "");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-    if (!emailRegex.hasMatch(value)) {
-      return 'Vui lòng nhập một địa chỉ email hợp lệ.';
-    }
-    return null;
   }
 
   @override

@@ -1,4 +1,7 @@
+// lib/view_models/user/user_profile_view_model.dart
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'; // Import để dùng BuildContext
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../dto/update_user_dto.dart';
@@ -18,9 +21,7 @@ class ProfileViewModel extends ChangeNotifier {
   ProfileState _state = ProfileState.idle;
   ProfileState get state => _state;
 
-  // Getter giúp UI check trạng thái gọn hơn
   bool get isLoading => _state == ProfileState.loading;
-  bool get isUnauthorized => _state == ProfileState.unauthorized;
 
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
@@ -28,7 +29,6 @@ class ProfileViewModel extends ChangeNotifier {
   XFile? _pickedAvatar;
   XFile? get pickedAvatar => _pickedAvatar;
 
-  // Constructor gọi fetch ngay (tuy nhiên UI cũng có gọi lại trong initState)
   ProfileViewModel() {
     fetchUserProfile();
   }
@@ -38,27 +38,21 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 1. Lấy profile (Logic chính)
+  // 1. Lấy thông tin Profile
   Future<void> fetchUserProfile() async {
     _setState(ProfileState.loading);
-
     try {
-      // Kiểm tra token dưới local storage
       final token = await _storage.read(key: 'accessToken');
-
       if (token == null) {
-        _user = null; // Đảm bảo user null
+        _user = null;
         _setState(ProfileState.unauthorized);
         return;
       }
-
-      // Có token thì gọi API
       _user = await _userService.getUserProfile();
       _setState(ProfileState.success);
     } catch (e) {
       if (e.toString().contains('401')) {
-        // Token hết hạn hoặc không hợp lệ
-        await _storage.delete(key: 'accessToken'); // Xóa token cũ đi
+        await _storage.delete(key: 'accessToken');
         _user = null;
         _setState(ProfileState.unauthorized);
       } else {
@@ -68,41 +62,74 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  // 2. Chọn ảnh từ thư viện
-  Future<void> pickImage() async {
+  // 2. Chọn ảnh và Tự động Upload ngay khi chọn
+  Future<void> pickImage(BuildContext context) async {
     try {
       final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
       if (image != null) {
         _pickedAvatar = image;
-        notifyListeners(); // Cập nhật UI để hiện ảnh vừa chọn (preview)
+        notifyListeners();
+
+        // Gọi API update ngay lập tức chỉ với Avatar
+        await updateInfo(context, fullName: _user?.fullName, onlyAvatar: true);
       }
     } catch (e) {
       if (kDebugMode) print("Lỗi chọn ảnh: $e");
     }
   }
 
-  // 3. Cập nhật Profile
-  Future<bool> updateUserProfile(UpdateUserDto dto) async {
+  // 3. Cập nhật thông tin (Dùng chung cho cả Text và Avatar)
+  Future<void> updateInfo(BuildContext context, {
+    String? fullName,
+    String? phone,
+    String? city,
+    bool onlyAvatar = false,
+  }) async {
+    if (_user == null) return;
+
     _setState(ProfileState.loading);
-    _errorMessage = '';
+
     try {
+      // Tạo DTO
+      final dto = UpdateUserDto(
+        fullName: fullName ?? _user!.fullName,
+        phone: phone ?? _user!.phone,
+        city: city ?? _user!.city,
+        // Email thường không cho sửa trực tiếp ở đây để bảo mật
+      );
+
+      // Gọi API (truyền _pickedAvatar nếu có)
       final updatedUser = await _userService.updateUser(dto, _pickedAvatar);
-      _user = updatedUser; // Cập nhật lại user mới nhất từ server
-      _pickedAvatar = null; // Reset ảnh đã chọn sau khi up thành công
+
+      _user = updatedUser; // Cập nhật lại UI với data mới từ server
+      _pickedAvatar = null; // Reset ảnh tạm
+
       _setState(ProfileState.success);
-      return true;
+
+      if (context.mounted && !onlyAvatar) {
+        Navigator.pop(context); // Đóng popup edit
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cập nhật thành công!"), backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
       _errorMessage = e.toString().replaceAll("Exception: ", "");
       _setState(ProfileState.error);
-      return false;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi: $_errorMessage"), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   // 4. Đăng xuất
-  Future<void> logout() async {
-    await _storage.delete(key: 'accessToken');
-    // Xóa thêm các key khác nếu cần (refreshToken, fcmToken...)
+  Future<void> logout(BuildContext context) async {
+    await _storage.deleteAll();
     _user = null;
     _setState(ProfileState.unauthorized);
+    if(context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
   }
 }

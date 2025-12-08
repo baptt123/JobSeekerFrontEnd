@@ -1,3 +1,4 @@
+// lib/services/notification_service.dart
 import 'package:dio/dio.dart';
 import '../models/notification-entity.dart';
 import '../utils/constant_api.dart';
@@ -6,17 +7,39 @@ import '../utils/dio_client.dart';
 class NotificationService {
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}/firebase');
 
-  Future<bool> sendTestNotification({required String token, required String title, required String body, int? userId}) async {
-    try {
-      final response = await _dio.post('/send-test', data: {'token': token, 'title': title, 'body': body, 'userId': userId});
-      return response.data['success'] == true;
-    } catch (_) { return false; }
-  }
-
-  Future<List<NotificationEntity>> getNotificationsByUserId(int userId) async {
+  // [UPDATE] Không cần truyền userId, Backend tự lấy từ Token
+  Future<List<NotificationEntity>> getNotifications() async {
     try {
       final response = await _dio.get('/notifications');
-      return (response.data['data'] as List).map((json) => NotificationEntity.fromJson(json)).toList();
-    } catch (_) { return []; }
+      if (response.data['success'] == true) {
+        return (response.data['data'] as List)
+            .map((json) => NotificationEntity.fromJson(json))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching notifications: $e");
+      return [];
+    }
+  }
+
+  // [NEW] Đánh dấu 1 tin đã đọc
+  Future<bool> markAsRead(int notificationId) async {
+    try {
+      await _dio.patch('/notifications/$notificationId/read');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // [NEW] Đánh dấu tất cả đã đọc
+  Future<bool> markAllAsRead() async {
+    try {
+      await _dio.patch('/notifications/read-all');
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }

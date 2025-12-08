@@ -1,4 +1,3 @@
-// lib/views/login/user/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/user/login_view_model.dart';
@@ -14,7 +13,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -41,14 +39,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "TechConnect",
+                    "Kết nối tìm việc làm",
                     style: TextStyle(
                         fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white
                     ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "The Future of Your Career Starts Here.",
+                    "Tương lai của bạn bắt đầu từ đây.",
                     style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                   const SizedBox(height: 40),
@@ -69,13 +67,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: AppColors.primary,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Center(child: Text("Login", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                            child: const Center(child: Text("Đăng nhập", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
                           ),
                         ),
                         Expanded(
                           child: GestureDetector(
                             onTap: () => Navigator.pushNamed(context, '/register'),
-                            child: const Center(child: Text("Register", style: TextStyle(color: Colors.white70))),
+                            child: const Center(child: Text("Đăng kí", style: TextStyle(color: Colors.white70))),
                           ),
                         ),
                       ],
@@ -86,26 +84,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Input Email
                   _buildDarkTextField(
                     controller: _emailController,
-                    label: "Email Address",
-                    icon: Icons.email_outlined,
+                    label: "Email",
+                    hintText: "Nhập email",
                   ),
                   const SizedBox(height: 16),
 
                   // Input Password
                   _buildDarkTextField(
                     controller: _passwordController,
-                    label: "Password",
-                    icon: Icons.lock_outline,
+                    label: "Mật khẩu",
+                    hintText: "Nhập mật khẩu",
                     isPassword: true,
-                    isVisible: _isPasswordVisible,
-                    onToggleVisibility: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                   ),
 
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () => Navigator.pushNamed(context, '/forgot_password'),
-                      child: const Text("Forgot Password?", style: TextStyle(color: Colors.white70)),
+                      child: const Text("Quên mật khẩu?", style: TextStyle(color: Colors.white70)),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -122,19 +118,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                          : const Text("Đăng nhập", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                   ),
 
                   const SizedBox(height: 24),
-                  const Text("OR", style: TextStyle(color: Colors.white54)),
+                  const Text("Hoặc", style: TextStyle(color: Colors.white54)),
                   const SizedBox(height: 24),
 
                   // Google Button
                   OutlinedButton.icon(
                     onPressed: () => vm.loginWithGoogle(context),
                     icon: Image.asset('assets/icon/google logo.png', height: 24), // Đảm bảo có icon google
-                    label: const Text("Continue with Google", style: TextStyle(color: Colors.white)),
+                    label: const Text("Đăng nhập với Google", style: TextStyle(color: Colors.white)),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.white24),
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -153,10 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildDarkTextField({
     required TextEditingController controller,
     required String label,
-    required IconData icon,
+    required String hintText,
     bool isPassword = false,
-    bool isVisible = false,
-    VoidCallback? onToggleVisibility,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,18 +159,13 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          obscureText: isPassword && !isVisible,
+          obscureText: isPassword,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white.withOpacity(0.05),
-            hintText: "Enter your ${label.toLowerCase()}",
+            hintText: hintText,
             hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-            prefixIcon: Icon(icon, color: Colors.white54),
-            suffixIcon: isPassword ? IconButton(
-              icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off, color: Colors.white54),
-              onPressed: onToggleVisibility,
-            ) : null,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),

@@ -2,7 +2,9 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/material.dart'; // Import để dùng Navigator
 import 'constant_api.dart';
+import 'global_keys.dart'; // ✅ Import Key
 
 class DioClient {
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -34,29 +36,24 @@ class DioClient {
           if (error.response?.statusCode == 401) {
             print("⚠️ Token hết hạn (401). Đang thử Refresh...");
 
-            // Gọi refresh
             final isRefreshed = await _handleTokenRefresh();
 
             if (isRefreshed) {
-              print("✅ Refresh thành công. Đang gọi lại API cũ...");
+              // ... (Logic retry giữ nguyên) ...
+              // (Phần code retry request cũ của bạn ở đây)
 
+              // Ví dụ ngắn gọn cho phần retry:
               final newToken = await _storage.read(key: 'accessToken');
-
-              // Tạo Dio mới để retry
               final retryDio = Dio();
-
-              // Cập nhật header Authorization với token MỚI
-              final newHeaders = Map<String, dynamic>.from(error.requestOptions.headers);
+              final newHeaders = Map<String, dynamic>.from(
+                error.requestOptions.headers,
+              );
               newHeaders['Authorization'] = 'Bearer $newToken';
 
-              // ✅ XỬ LÝ URL CHUẨN XÁC:
-              // Nếu path chưa có http (là đường dẫn tương đối), cần nối với baseUrl cũ
               String requestUrl = error.requestOptions.path;
               if (!requestUrl.startsWith('http')) {
                 requestUrl = (error.requestOptions.baseUrl) + requestUrl;
               }
-
-              print("🔄 Retrying request to: $requestUrl");
 
               try {
                 final response = await retryDio.request(
@@ -70,13 +67,14 @@ class DioClient {
                 );
                 return handler.resolve(response);
               } catch (e) {
-                print("❌ Retry thất bại: $e");
-                // Nếu retry vẫn lỗi -> Trả về lỗi gốc để App logout
+                // Nếu Retry vẫn lỗi -> Logout
+                await _performLogout();
                 return handler.next(error);
               }
             } else {
               print("❌ Refresh thất bại. Yêu cầu đăng nhập lại.");
-              await _storage.deleteAll();
+              // ✅ GỌI HÀM LOGOUT & ĐIỀU HƯỚNG
+              await _performLogout();
             }
           }
           return handler.next(error);
@@ -87,13 +85,14 @@ class DioClient {
     return dio;
   }
 
+  // --- Hàm xử lý Refresh Token (Giữ nguyên logic cũ) ---
   static Future<bool> _handleTokenRefresh() async {
     final refreshToken = await _storage.read(key: 'refreshToken');
     if (refreshToken == null) return false;
 
     try {
+      // Dùng Dio mới để tránh interceptor lặp vô tận
       final dio = Dio();
-      // Gọi refresh
       final response = await dio.post(
         '$_authUrl/refresh',
         data: {'refreshToken': refreshToken},
@@ -101,19 +100,31 @@ class DioClient {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
-        // Kiểm tra kỹ dữ liệu trả về trước khi lưu
         if (data['accessToken'] != null) {
           await _storage.write(key: 'accessToken', value: data['accessToken']);
         }
         if (data['refreshToken'] != null) {
-          await _storage.write(key: 'refreshToken', value: data['refreshToken']);
+          await _storage.write(
+            key: 'refreshToken',
+            value: data['refreshToken'],
+          );
         }
         return true;
       }
     } catch (e) {
       print("Lỗi Refresh Token API: $e");
-      await _storage.deleteAll();
     }
     return false;
+  }
+
+  // --- ✅ HÀM MỚI: Xóa token và Điều hướng về Login ---
+  static Future<void> _performLogout() async {
+    await _storage.deleteAll(); // Xóa sạch token
+
+    // Sử dụng Global Key để điều hướng mà không cần BuildContext
+    ManagingGlobalKey.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      '/login',
+      (route) => false, // Xóa hết lịch sử các màn hình trước đó
+    );
   }
 }

@@ -63,23 +63,29 @@ class HomeViewModel extends ChangeNotifier {
       if (isLoggedIn) {
         try {
           _isRecommendedMode = true;
-          // Gọi API
-          final results = await Future.wait([
-            _jobService.getRecommendedJobs(),
-            _jobService.getSavedJobs(),
-            _userService.getUserProfile(),
-          ]);
+          // Gọi API lấy User Profile & Saved Jobs trước
+          final userProfile = await _userService.getUserProfile();
+          final savedJobs = await _jobService.getSavedJobs();
 
-          _jobs = results[0] as List<JobEntity>;
-          final savedJobs = results[1] as List<JobEntity>;
+          _currentUser = userProfile;
           _savedJobIds = savedJobs.map((job) => job.jobId).toSet();
-          _currentUser = results[2] as UserEntity;
+
+          // Gọi API Recommended
+          final recommendedJobs = await _jobService.getRecommendedJobs();
+
+          if (recommendedJobs.isNotEmpty) {
+            _jobs = recommendedJobs;
+            print("✅ Đã load ${recommendedJobs.length} việc làm gợi ý từ Elasticsearch");
+          } else {
+            // [LOGIC MỚI] Nếu không có gợi ý (do chưa có CV hoặc không khớp), chuyển về chế độ thường
+            print("⚠️ Không có việc làm gợi ý, chuyển sang load All Jobs");
+            _isRecommendedMode = false;
+            await _loadGuestData(); // Load job mới nhất bình thường
+          }
 
           _state = HomeState.success;
         } catch (e) {
           print("Lỗi khi tải dữ liệu User: $e");
-          // 🔥 FIX QUAN TRỌNG: Nếu lỗi bất kỳ khi đang ở chế độ User -> Logout về Guest ngay
-          // Để tránh hiện màn hình lỗi
           await logout();
           return;
         }
@@ -87,14 +93,12 @@ class HomeViewModel extends ChangeNotifier {
         await _loadGuestData();
       }
     } catch (e) {
-      // Nếu lỗi quá nặng (ví dụ mất mạng hoàn toàn) mới hiện lỗi
       _state = HomeState.error;
       _errorMessage = "Không thể kết nối đến máy chủ.";
     } finally {
       notifyListeners();
     }
   }
-
   // Tách hàm load guest ra cho gọn
   Future<void> _loadGuestData() async {
     _isRecommendedMode = false;

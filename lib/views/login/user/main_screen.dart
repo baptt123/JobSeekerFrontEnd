@@ -1,15 +1,19 @@
 // lib/views/login/user/main_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// Import ViewModels
+import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
+import 'package:job_seeker_frontend/view_models/user/notification_view_model.dart';
+
+// Import Screens
 import 'package:job_seeker_frontend/views/login/user/conversation_list_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/widget/user/home/home_bottom_nav.dart';
-
 import 'cv_template_selection_screen.dart';
-
-// ĐIỀU CHỈNH: Import đúng đường dẫn file vừa tạo ở bước trước
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -23,12 +27,25 @@ class _MainScreenState extends State<MainScreen> {
 
   // Danh sách các màn hình tương ứng với 5 tabs
   final List<Widget> _screens = [
-    const HomeScreen(),                // Tab 0: Home
-    const SavedJobsScreen(),           // Tab 1: Saved Jobs
-    const CvTemplateSelectionScreen(), // Tab 2: Tạo CV (Đã cập nhật)
-    const ConversationListScreen(),    // Tab 3: Message
-    const ProfileScreen(),             // Tab 4: Profile
+    const HomeScreen(),
+    const SavedJobsScreen(),
+    const CvTemplateSelectionScreen(),
+    const ConversationListScreen(),
+    const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Gọi API lấy dữ liệu ngay khi vào màn hình chính để cập nhật Badge
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 1. Tải danh sách Job đã lưu
+      context.read<SavedJobsViewModel>().fetchSavedJobs();
+
+      // 2. Tải thông báo (để lấy số lượng chưa đọc cho badge Message/Notification)
+      context.read<NotificationViewModel>().fetchNotifications();
+    });
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -38,9 +55,12 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Lắng nghe số lượng tin chưa đọc từ NotificationViewModel
+    // (Bạn có thể thay bằng MessageViewModel nếu có logic chat riêng)
+    final unreadCount = context.select<NotificationViewModel, int>((vm) => vm.unreadCount);
+
     return Scaffold(
       // Dùng IndexedStack để giữ trạng thái các trang khi chuyển tab
-      // (ví dụ đang chat dở hoặc đang điền form CV thì không bị mất dữ liệu khi chuyển tab)
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -48,6 +68,9 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: HomeBottomNav(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
+        // Truyền số lượng tin chưa đọc vào BottomBar
+        // (Lưu ý: savedJobCount không cần truyền vì HomeBottomNav đã tự lắng nghe Provider bên trong)
+        unreadMessagesCount: unreadCount,
       ),
     );
   }
