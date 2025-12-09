@@ -1,8 +1,10 @@
+// lib/services/login_service.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user-token-entity.dart';
 import '../utils/constant_api.dart';
-import '../utils/dio_client.dart'; // ✅ Import DioClient
+import '../utils/dio_client.dart';
 
 class LoginService {
   // Sử dụng DioClient cho các request thông thường
@@ -24,23 +26,29 @@ class LoginService {
       }
       return null;
     } on DioException catch (e) {
+      // 🔥 XỬ LÝ LỖI CHI TIẾT TỪ BACKEND
       final msg = e.response?.data['message'] ?? 'Đăng nhập thất bại';
+
+      // Nếu tài khoản bị cấm (Forbidden - 403)
+      if (e.response?.statusCode == 403) {
+        throw Exception("403: $msg");
+      }
+
       throw Exception(msg);
     }
   }
 
-  // 2. AUTO LOGIN (CẬP NHẬT: Thêm Timeout và Xử lý lỗi mạng)
+  // 2. AUTO LOGIN
   Future<UserToken?> tryAutoLogin() async {
     final refreshToken = await _storage.read(key: 'refreshToken');
     if (refreshToken == null) return null;
 
     try {
-      // ✅ CẬP NHẬT: Thiết lập timeout ngắn (ví dụ 5 giây)
-      // Để nếu mạng lag hoặc server sập thì không bắt user đợi lâu
+      // Thiết lập timeout ngắn cho Auto Login
       final dio = Dio(BaseOptions(
         baseUrl: '${ConstantAPI.baseUrl}/auth',
-        connectTimeout: const Duration(seconds: 5), // Quá 5s không kết nối được -> Hủy
-        receiveTimeout: const Duration(seconds: 5), // Quá 5s không nhận được data -> Hủy
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
       ));
 
       final response = await dio.post(
@@ -54,19 +62,16 @@ class LoginService {
         return token;
       }
     } on DioException catch (e) {
-      // ✅ XỬ LÝ THÔNG MINH:
-      // - Nếu lỗi 400/401 (Token sai/hết hạn) -> Xóa token để đăng nhập lại
-      if (e.response?.statusCode == 400 || e.response?.statusCode == 401) {
+      // Nếu lỗi 400/401/403 (Token sai/hết hạn/bị cấm) -> Xóa token để đăng nhập lại
+      if (e.response?.statusCode == 400 ||
+          e.response?.statusCode == 401 ||
+          e.response?.statusCode == 403) {
         await logout();
       }
-      // - Nếu lỗi Mạng (Timeout, Server Die...) -> KHÔNG làm gì cả (Return null)
-      //   App sẽ tự hiểu là không auto login được và chuyển người dùng vào màn hình chính (Guest Mode)
-      //   mà không bị kẹt lại màn hình Splash.
       else {
         print("⚠️ Lỗi kết nối khi Auto Login: ${e.message}. Vào App với chế độ Khách/Offline.");
       }
     } catch (e) {
-      // Lỗi khác không xác định -> Logout cho an toàn
       await logout();
     }
     return null;

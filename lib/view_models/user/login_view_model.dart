@@ -1,3 +1,5 @@
+// lib/view_models/user/login_view_model.dart
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../services/login_service.dart';
@@ -43,11 +45,53 @@ class LoginViewModel extends ChangeNotifier {
 
         Fluttertoast.showToast(msg: "Đăng nhập thành công");
 
-        // ✅ SỬA: Xóa hết stack cũ, set Home làm root
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        // Xóa hết stack cũ, set Home làm root
+        if (context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        }
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString().replaceAll("Exception: ", ""));
+      // 🔥 XỬ LÝ LỖI HIỂN THỊ
+      String errorMsg = e.toString().replaceAll("Exception: ", "");
+
+      // Kiểm tra nếu lỗi là 403 hoặc chứa từ khóa liên quan đến việc bị khóa
+      if (errorMsg.contains("403") ||
+          errorMsg.toLowerCase().contains("vô hiệu hóa") ||
+          errorMsg.toLowerCase().contains("khóa")) {
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false, // Bắt buộc người dùng phải bấm nút Đóng
+            builder: (ctx) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.block, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text("Tài khoản bị khóa", style: TextStyle(color: Colors.red)),
+                ],
+              ),
+              content: const Text(
+                "Tài khoản của bạn đã bị vô hiệu hóa do vi phạm chính sách hoặc yêu cầu từ quản trị viên.\n\nVui lòng liên hệ bộ phận hỗ trợ để biết thêm chi tiết.",
+                style: TextStyle(fontSize: 15),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Đã hiểu", style: TextStyle(fontWeight: FontWeight.bold)),
+                )
+              ],
+            ),
+          );
+        }
+      } else {
+        // Lỗi thông thường (sai pass, mạng...)
+        Fluttertoast.showToast(
+          msg: errorMsg,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
     } finally {
       _setLoading(false);
     }
@@ -66,8 +110,9 @@ class LoginViewModel extends ChangeNotifier {
       notifyListeners();
       print("✅ Auto login bằng Token hệ thống thành công");
 
-      // ✅ SỬA: Xóa hết stack cũ, vào thẳng Home
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      }
       return;
     }
 
@@ -86,7 +131,6 @@ class LoginViewModel extends ChangeNotifier {
     } else {
       print("❌ Không có phiên đăng nhập. User cần login thủ công.");
       await _loginService.logout();
-      // Không cần navigate vì người dùng đang ở LoginScreen rồi
     }
   }
 
@@ -98,8 +142,9 @@ class LoginViewModel extends ChangeNotifier {
     _userId = null;
     notifyListeners();
 
-    // Về màn hình Login và xóa hết lịch sử
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
   }
 
   // --- 4. LOGIN VỚI GOOGLE ---
@@ -135,11 +180,26 @@ class LoginViewModel extends ChangeNotifier {
         _userId = tokenObject.userId;
         notifyListeners();
 
-        // ✅ SỬA: Xóa hết stack cũ, set Home làm root
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        if (context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        }
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString());
+      // Xử lý lỗi cấm tài khoản cho Google Login
+      if (e.toString().contains("403")) {
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Tài khoản bị khóa", style: TextStyle(color: Colors.red)),
+              content: const Text("Tài khoản Google này đã bị khóa trên hệ thống."),
+              actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Đóng"))],
+            ),
+          );
+        }
+      } else {
+        Fluttertoast.showToast(msg: e.toString());
+      }
       await _firebaseLoginService.signOut();
     }
   }
