@@ -6,7 +6,6 @@ import 'dart:async';
 
 import '../../../view_models/user/home_view_model.dart';
 import '../../../view_models/user/save_job_view_model.dart';
-// Import ProfileViewModel để lắng nghe thay đổi ảnh đại diện
 import '../../../view_models/user/user_profile_view_model.dart';
 import '../../../widget/user/home/home_header.dart';
 import 'filter_screen.dart';
@@ -35,10 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 1. Fetch dữ liệu Job cho Home
       context.read<HomeViewModel>().fetchInitialData();
-
-      // 2. Fetch Profile để đảm bảo có ảnh mới nhất ngay khi mở app
       context.read<ProfileViewModel>().fetchUserProfile();
     });
 
@@ -75,11 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 Lắng nghe HomeViewModel: Bất cứ khi nào danh sách saved thay đổi (dù ở Home hay Detail), Widget này sẽ rebuild
+    // Lắng nghe HomeViewModel và ProfileViewModel
     final homeVM = context.watch<HomeViewModel>();
-
-    // Lắng nghe ProfileViewModel
     final profileVM = context.watch<ProfileViewModel>();
+
+    // Ưu tiên hiển thị user từ Profile vì nó realtime hơn
     final currentUser = profileVM.user ?? homeVM.currentUser;
 
     return Scaffold(
@@ -123,9 +119,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-// Widget hiển thị phần thân màn hình chính
   Widget _buildBody(BuildContext context, HomeViewModel vm, dynamic user) {
-    // 1. Xử lý trường hợp lỗi và không có dữ liệu
+    // Xử lý lỗi load dữ liệu
     if (vm.state == HomeState.error && vm.jobs.isEmpty) {
       return Center(
         child: Column(
@@ -144,21 +139,17 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // 2. Nội dung chính (Scrollable)
     return SingleChildScrollView(
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // A. Header + Thanh tìm kiếm (Stack chồng lên nhau)
+          // Header & Search
           Stack(
             clipBehavior: Clip.none,
             children: [
-              // Header chứa Avatar, Tên, Notification
               HomeHeader(user: user),
-
-              // Thanh tìm kiếm giả (Fake Search Bar) nằm đè lên Header
               Positioned(
                 bottom: 0,
                 left: 20,
@@ -175,13 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           const SizedBox(height: 30),
-
-          // B. Banner quảng cáo / Nổi bật
           _buildBannerSection(),
-
           const SizedBox(height: 24),
 
-          // C. Tiêu đề danh sách việc làm (Logic hiển thị theo chế độ Gợi ý)
+          // Title List
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Row(
@@ -190,40 +178,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tiêu đề chính
                     Text(
-                      vm.isRecommendedMode
-                          ? 'Việc làm phù hợp với bạn ✨' // Chế độ gợi ý từ CV
-                          : 'Việc làm mới nhất',          // Chế độ mặc định
+                      vm.isRecommendedMode ? 'Việc làm phù hợp ✨' : 'Việc làm mới nhất',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
-
-                    // Dòng phụ giải thích (chỉ hiện khi đang gợi ý)
                     if (vm.isRecommendedMode)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
                         child: Text(
-                          "Dựa trên kỹ năng trong CV chính của bạn",
+                          "Gợi ý dựa trên hồ sơ của bạn",
                           style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
                         ),
                       ),
                   ],
                 ),
-
-                // Nút "Xem tất cả" (Tùy chọn)
-                /*
-                TextButton(
-                  onPressed: () { ... },
-                  child: const Text("Xem tất cả", style: TextStyle(color: kPrimaryColor)),
-                )
-                */
               ],
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // D. Danh sách công việc (ListView)
+          // Job List
           if (vm.jobs.isEmpty && vm.state == HomeState.success)
             const Padding(
                 padding: EdgeInsets.all(40.0),
@@ -240,109 +215,187 @@ class _HomeScreenState extends State<HomeScreen> {
           else
             ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              shrinkWrap: true, // Quan trọng để nằm trong SingleChildScrollView
-              physics: const NeverScrollableScrollPhysics(), // Tắt scroll riêng của ListView
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: vm.jobs.length,
               itemBuilder: (context, index) {
                 return _buildJobItem(context, vm, index);
               },
             ),
 
-          // E. Loading Indicator khi tải thêm (Load More)
           if (vm.state == HomeState.loadingMore)
             const Padding(
                 padding: EdgeInsets.all(20.0),
                 child: Center(child: CircularProgressIndicator(color: kPrimaryColor))
             ),
 
-          // Khoảng trống dưới cùng để không bị che bởi BottomNavigationBar
           const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  // Widget hiển thị từng Job Item
+  // ✅ Widget Job Item ĐÃ ĐƯỢC NÂNG CẤP GIAO DIỆN
   Widget _buildJobItem(BuildContext context, HomeViewModel vm, int index) {
     final job = vm.jobs[index];
     final logoUrl = job.company?.logoUrl;
     final bool hasValidLogo = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
-    final String salaryText = job.salaryMin != null && job.salaryMax != null
-        ? "\$${(job.salaryMin!/1000).toInt()}k - \$${(job.salaryMax!/1000).toInt()}k"
-        : "\$${(job.salaryMin ?? 0)/1000}k+";
 
-    // Kiểm tra trạng thái đã lưu
+    // Format lương
+    String _formatSalary(double amount) => "\$${(amount/1000).toInt()}k";
+
+    final String salaryText = (job.salaryMin != null && job.salaryMax != null)
+        ? "${_formatSalary(job.salaryMin!)} - ${_formatSalary(job.salaryMax!)}"
+        : (job.salaryMin != null ? "${_formatSalary(job.salaryMin!)} +" : "Thỏa thuận");
+
     final bool isSaved = vm.isJobSaved(job.jobId);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      shadowColor: Colors.black12,
-      color: Colors.white,
-      child: InkWell(
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          // Chuyển sang màn hình chi tiết
-          Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => JobDetailScreen(jobTitle: job.title))
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-                padding: const EdgeInsets.all(4),
-                child: hasValidLogo
-                    ? Image.network(logoUrl, fit: BoxFit.contain, errorBuilder: (context, error, stackTrace) => Icon(Icons.business, color: Colors.grey[400], size: 30))
-                    : Icon(Icons.business, color: Colors.grey[400], size: 30),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 6),
-                    Text(job.company?.name ?? 'Công ty ẩn danh', style: TextStyle(color: Colors.grey[600], fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8, runSpacing: 8,
-                      children: [
-                        if (job.location != null) _buildConstrainedTag(Icons.location_on_outlined, job.location!),
-                        _buildConstrainedTag(Icons.attach_money, salaryText, color: Colors.green),
-                        if (job.jobType != null) _buildConstrainedTag(Icons.access_time, job.jobType!),
-                      ],
-                    )
-                  ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: const Offset(0, 4), // Bóng đổ nhẹ
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => JobDetailScreen(jobTitle: job.title))
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Logo Công ty
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade100),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: hasValidLogo
+                      ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(logoUrl, fit: BoxFit.contain)
+                  )
+                      : Center(child: Text(job.company?.name?[0] ?? "C", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: kPrimaryColor))),
                 ),
-              ),
 
-              // 🔥 NÚT SAVE JOB - ĐIỀU CHỈNH MÀU ĐỎ 🔥
-              IconButton(
-                icon: Icon(
-                    isSaved ? Icons.bookmark : Icons.bookmark_border,
-                    // ✅ Nếu đã lưu -> Màu Đỏ (Colors.red), Ngược lại -> Màu xám
-                    color: isSaved ? Colors.red : Colors.grey[400]
+                const SizedBox(width: 14),
+
+                // 2. Nội dung chính
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Tên Job
+                      Text(
+                          job.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis
+                      ),
+                      const SizedBox(height: 4),
+                      // Tên Công ty
+                      Text(
+                          job.company?.name ?? 'Công ty ẩn danh',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Tags (Location, Salary, Type)
+                      Wrap(
+                        spacing: 8, runSpacing: 6,
+                        children: [
+                          if (job.location != null) _buildTag(Icons.location_on_outlined, job.location!),
+                          _buildTag(Icons.attach_money, salaryText, color: Colors.green.shade700, bgColor: Colors.green.shade50),
+                          if (job.jobType != null) _buildTag(Icons.work_outline, job.jobType!, color: Colors.blue.shade700, bgColor: Colors.blue.shade50),
+                        ],
+                      )
+                    ],
+                  ),
                 ),
-                onPressed: () {
-                  // Gọi hàm toggleSaveJob trong ViewModel (Hàm này đã xử lý update UI ngay lập tức)
-                  vm.toggleSaveJob(job, context, context.read<SavedJobsViewModel>());
-                },
-              ),
-            ],
+
+                // 3. Nút Bookmark (Gọi toggleSaveJob)
+                InkWell(
+                  onTap: () {
+                    // Logic đã được sửa trong ViewModel: tự check token
+                    vm.toggleSaveJob(job, context, context.read<SavedJobsViewModel>());
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 8, top: 0),
+                    child: Icon(
+                        isSaved ? Icons.bookmark : Icons.bookmark_border_rounded,
+                        color: isSaved ? kPrimaryColor : Colors.grey[400],
+                        size: 26
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // --- Các Widget phụ (Giữ nguyên) ---
+  Widget _buildTag(IconData icon, String text, {Color? color, Color? bgColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor ?? Colors.grey[100],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color ?? Colors.grey[600]),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+                text,
+                style: TextStyle(
+                    color: color ?? Colors.grey[700],
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Helpers ---
+  void _showFilterScreen(BuildContext context) {
+    final vm = context.read<HomeViewModel>();
+    showModalBottomSheet(context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (_) => ChangeNotifierProvider.value(value: vm, child: const FilterScreen()));
+  }
+
+  void _showLoginRequired(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Vui lòng đăng nhập để sử dụng tính năng này"), action: SnackBarAction(label: 'Đăng nhập', onPressed: () => Navigator.pushNamed(context, '/login'))));
+  }
+
   Widget _buildDrawer(BuildContext context, dynamic user) {
     final bool isUserLoggedIn = user != null;
     final String? avatarUrl = user?.avatarUrl;
@@ -411,24 +464,6 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15.0), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]),
       child: Row(children: [const Icon(Icons.search, color: kPrimaryColor), const SizedBox(width: 12), const Expanded(child: Text('Tìm kiếm việc làm, công ty...', style: TextStyle(color: Colors.grey, fontSize: 14), overflow: TextOverflow.ellipsis))]),
-    );
-  }
-
-  Widget _buildConstrainedTag(IconData icon, String text, {Color? color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: (color ?? Colors.grey).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 120),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: color ?? Colors.grey[600]),
-            const SizedBox(width: 4),
-            Flexible(child: Text(text, style: TextStyle(color: color ?? Colors.grey[700], fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis, maxLines: 1)),
-          ],
-        ),
-      ),
     );
   }
 
@@ -503,14 +538,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  void _showFilterScreen(BuildContext context) {
-    final vm = context.read<HomeViewModel>();
-    showModalBottomSheet(context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (_) => ChangeNotifierProvider.value(value: vm, child: const FilterScreen()));
-  }
-
-  void _showLoginRequired(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Vui lòng đăng nhập để sử dụng tính năng này"), action: SnackBarAction(label: 'Đăng nhập', onPressed: () => Navigator.pushNamed(context, '/login'))));
   }
 }

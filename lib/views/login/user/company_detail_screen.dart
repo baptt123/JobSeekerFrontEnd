@@ -192,23 +192,33 @@ class CompanyDetailScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
+
+          // 🔥 FIX LỖI OVERFLOW TẠI ĐÂY
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.location_on, size: 16, color: kTextGrey),
               const SizedBox(width: 4),
-              Text(
-                company.address ?? "Chưa cập nhật địa chỉ",
-                style: const TextStyle(color: kTextGrey, fontSize: 14),
+              // Sử dụng Flexible để text tự động xuống dòng hoặc cắt bớt nếu quá dài
+              Flexible(
+                child: Text(
+                  company.address ?? "Chưa cập nhật địa chỉ",
+                  style: const TextStyle(color: kTextGrey, fontSize: 14),
+                  textAlign: TextAlign.center,
+                  maxLines: 2, // Giới hạn 2 dòng để giao diện đẹp
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
+
           if (company.website != null && company.website!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
                 company.website!,
                 style: const TextStyle(color: kAccentColor, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
               ),
             ),
         ],

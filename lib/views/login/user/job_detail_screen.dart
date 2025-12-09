@@ -33,6 +33,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     super.dispose();
   }
 
+  // --- Hàm điều hướng sang CompanyDetailScreen ---
+  void _navigateToCompany(BuildContext context, JobEntity job) {
+    final companyId = job.company?.companyId;
+    final companyName = job.company?.name ?? "Company";
+
+    if (companyId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CompanyDetailScreen(
+            companyId: companyId,
+            companyName: companyName,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Chưa có thông tin chi tiết về công ty này")),
+      );
+    }
+  }
+
   // --- Hàm mở Popup Ứng tuyển ---
   void _showApplyBottomSheet(BuildContext parentContext, JobDetailViewModel vm) {
     // 1. Gọi API lấy danh sách CV ngay khi mở popup
@@ -148,9 +170,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     String? logoUrl = job.company?.logoUrl;
     bool isValidUrl = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
 
-    // Lấy ID công ty để điều hướng
-    final companyId = job.company?.companyId;
-
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -164,22 +183,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 🔥 LOGO CÔNG TY (BẤM ĐỂ XEM CHI TIẾT)
+              // 🔥 1. LOGO CÔNG TY (BẤM ĐỂ XEM CHI TIẾT)
               GestureDetector(
-                onTap: () {
-                  if (companyId != null) {
-                    // Navigate sang CompanyDetailScreen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CompanyDetailScreen(
-                          companyId: companyId,
-                          companyName: job.company?.name ?? "Company",
-                        ),
-                      ),
-                    );
-                  }
-                },
+                onTap: () => _navigateToCompany(context, job),
                 child: Container(
                   width: 80, height: 80,
                   padding: const EdgeInsets.all(8),
@@ -213,12 +219,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
 
               const SizedBox(height: 4),
 
-              // Tên Công ty
-              Text(
-                job.company?.name ?? "Công ty ẩn danh",
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              // 🔥 2. TÊN CÔNG TY (BẤM ĐỂ XEM CHI TIẾT)
+              InkWell(
+                onTap: () => _navigateToCompany(context, job),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          job.company?.name ?? "Công ty ẩn danh",
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            decoration: TextDecoration.underline, // Gạch chân để gợi ý bấm được
+                            decorationColor: Colors.white70,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white70)
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -233,6 +260,28 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
         ? job.skills
         : (job.requirements?.split(', ') ?? []);
 
+    // Format lương: $15000 -> $15k
+    String _formatSalary(double amount) => "\$${(amount/1000).toInt()}k";
+    final String salaryText = (job.salaryMin != null && job.salaryMax != null)
+        ? "${_formatSalary(job.salaryMin!)} - ${_formatSalary(job.salaryMax!)}"
+        : (job.salaryMin != null ? "${_formatSalary(job.salaryMin!)} +" : "Thỏa thuận");
+
+    // ✅ LOGIC NGÀY THÁNG NĂM
+    String deadlineText = "Không thời hạn";
+    bool isExpired = false;
+
+    if (job.deadline != null) {
+      final d = job.deadline!;
+      // Format thành dd/MM/yyyy
+      deadlineText = "Hạn: ${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}";
+
+      // Kiểm tra hết hạn
+      if (d.isBefore(DateTime.now())) {
+        deadlineText = "Đã hết hạn ($deadlineText)";
+        isExpired = true;
+      }
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -243,9 +292,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
               Expanded(
                 child: _buildDetailBox(
                   icon: Icons.attach_money,
-                  text: (job.salaryMin != null && job.salaryMax != null)
-                      ? "\$${job.salaryMin} - \$${job.salaryMax}"
-                      : "Thỏa thuận",
+                  text: salaryText,
                   color: Colors.green,
                 ),
               ),
@@ -272,11 +319,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
               const SizedBox(width: 12),
               Expanded(
                 child: _buildDetailBox(
-                  icon: Icons.calendar_today,
-                  text: job.deadline != null
-                      ? "Hạn: ${job.deadline!.day}/${job.deadline!.month}"
-                      : "Không thời hạn",
-                  color: Colors.redAccent,
+                  icon: isExpired ? Icons.event_busy : Icons.calendar_today, // Đổi icon nếu hết hạn
+                  text: deadlineText,
+                  // Đổi màu nếu hết hạn
+                  color: isExpired ? Colors.grey : Colors.redAccent,
                 ),
               ),
             ],
@@ -351,10 +397,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
           const Text("Giới thiệu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Text(
-            job.company?.description ?? "Chưa có giới thiệu.",
+            job.company?.description ?? "Chưa có giới thiệu về công ty này.",
             style: const TextStyle(height: 1.5, fontSize: 15, color: Colors.black87),
             textAlign: TextAlign.justify,
           ),
+
+          const SizedBox(height: 30),
+
+          // 🔥 3. NÚT XEM TRANG CÔNG TY
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: () => _navigateToCompany(context, job),
+              icon: const Icon(Icons.apartment, size: 20),
+              label: const Text("Xem trang công ty & Việc làm khác", style: TextStyle(fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: kPrimaryColor,
+                side: const BorderSide(color: kPrimaryColor),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 80),
         ],
       ),
@@ -395,8 +460,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
-                  // 1. Lấy thông tin Recruiter từ Job Entity
-                  // (Phải đảm bảo API GetJobDetail đã join với bảng User để trả về field 'recruiter')
                   final recruiter = job.recruiter;
 
                   if (recruiter == null || recruiter.id == 0) {
@@ -406,7 +469,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                     return;
                   }
 
-                  // 2. Chuyển sang màn hình Chat
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -627,8 +689,8 @@ class _ApplyJobFormState extends State<ApplyJobForm> {
                   : () async {
                 final success = await vm.submitApplication(context, _selectedCvId, _coverLetterController.text);
                 if (success && mounted) {
-                  Navigator.pop(context); // Đóng popup
-                  _showSuccessDialog(context);
+                  Navigator.pop(context); // Đóng BottomSheet
+                  _showSuccessDialog(context); // Mở Dialog thành công
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -645,11 +707,25 @@ class _ApplyJobFormState extends State<ApplyJobForm> {
     );
   }
 
+  // ✅ ĐÃ SỬA: Dùng dialogContext để đóng dialog
   void _showSuccessDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => AlertDialog(
-      title: const Column(children: [Icon(Icons.check_circle, color: Colors.green, size: 60), SizedBox(height: 10), Text("Thành công!")]),
-      content: const Text("Hồ sơ ứng tuyển của bạn đã được gửi.", textAlign: TextAlign.center),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Đóng"))],
-    ));
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Column(children: [
+          Icon(Icons.check_circle, color: Colors.green, size: 60),
+          SizedBox(height: 10),
+          Text("Thành công!")
+        ]),
+        content: const Text("Hồ sơ ứng tuyển của bạn đã được gửi.", textAlign: TextAlign.center),
+        actions: [
+          TextButton(
+            // Dùng dialogContext được builder cung cấp để pop chính xác Dialog này
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text("Đóng"),
+          )
+        ],
+      ),
+    );
   }
 }

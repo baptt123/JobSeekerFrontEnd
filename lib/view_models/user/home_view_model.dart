@@ -62,7 +62,6 @@ class HomeViewModel extends ChangeNotifier {
 
       if (isLoggedIn) {
         try {
-          _isRecommendedMode = true;
           // Gọi API lấy User Profile & Saved Jobs trước
           final userProfile = await _userService.getUserProfile();
           final savedJobs = await _jobService.getSavedJobs();
@@ -75,17 +74,16 @@ class HomeViewModel extends ChangeNotifier {
 
           if (recommendedJobs.isNotEmpty) {
             _jobs = recommendedJobs;
-            print("✅ Đã load ${recommendedJobs.length} việc làm gợi ý từ Elasticsearch");
+            _isRecommendedMode = true; // Chỉ bật chế độ này nếu CÓ kết quả gợi ý
           } else {
-            // [LOGIC MỚI] Nếu không có gợi ý (do chưa có CV hoặc không khớp), chuyển về chế độ thường
-            print("⚠️ Không có việc làm gợi ý, chuyển sang load All Jobs");
+            // Nếu không có gợi ý (do chưa có CV hoặc không khớp), chuyển về chế độ thường
             _isRecommendedMode = false;
-            await _loadGuestData(); // Load job mới nhất bình thường
+            await _loadAllJobs(); // Load job mới nhất bình thường
           }
 
           _state = HomeState.success;
         } catch (e) {
-          print("Lỗi khi tải dữ liệu User: $e");
+          // Nếu token lỗi, logout và load guest data
           await logout();
           return;
         }
@@ -99,11 +97,17 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   // Tách hàm load guest ra cho gọn
   Future<void> _loadGuestData() async {
     _isRecommendedMode = false;
     _savedJobIds = {};
     _currentUser = null;
+    await _loadAllJobs();
+  }
+
+  // Hàm load job chung (phân trang)
+  Future<void> _loadAllJobs() async {
     try {
       final response = await _jobService.getAllJobs(page: 1, limit: 10);
       _jobs = response.data;
@@ -163,14 +167,29 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  // ✅ ĐÃ SỬA: Logic Toggle Save Job
   Future<void> toggleSaveJob(JobEntity job, BuildContext context, SavedJobsViewModel savedJobsViewModel) async {
-    void _showSnackbar(String message) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 1)));
+    void _showSnackbar(String message, {bool isError = false}) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: isError ? Colors.redAccent : Colors.green,
+              duration: const Duration(seconds: 1),
+            )
+        );
+      }
     }
-    if (!_isRecommendedMode) {
-      _showSnackbar('Vui lòng đăng nhập để lưu công việc');
+
+    // 1. Kiểm tra Token thật sự
+    final token = await _storage.read(key: 'accessToken');
+    if (token == null) {
+      _showSnackbar('Vui lòng đăng nhập để lưu công việc', isError: true);
+      // Có thể chuyển hướng sang Login nếu muốn
+      // Navigator.pushNamed(context, '/login');
       return;
     }
+
     try {
       final jobId = job.jobId;
       if (isJobSaved(jobId)) {
@@ -188,12 +207,13 @@ class HomeViewModel extends ChangeNotifier {
     } catch (e) {
       if (e.toString().contains('401')) {
         await logout();
-        _showSnackbar('Phiên đăng nhập hết hạn');
+        _showSnackbar('Phiên đăng nhập hết hạn', isError: true);
       } else {
-        _showSnackbar('Lỗi: $e');
+        _showSnackbar('Lỗi: $e', isError: true);
       }
     }
   }
+
   void removeSavedId(int jobId) { _savedJobIds.remove(jobId); notifyListeners(); }
   void addSavedId(int jobId) { _savedJobIds.add(jobId); notifyListeners(); }
   Future<void> fetchJobs() async { await fetchInitialData(); }

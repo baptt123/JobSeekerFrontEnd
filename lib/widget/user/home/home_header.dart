@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/user-entity.dart';
-import '../../../../view_models/user/notification_view_model.dart';
+// import '../../../../view_models/user/notification_view_model.dart'; // Có thể bỏ import này nếu không cần nữa
 
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
@@ -62,45 +62,20 @@ class HomeHeader extends StatelessWidget {
                   : _buildUserHeader(name),
             ),
 
-            // --- NOTIFICATION ICON (🔥 Logic Badge mới) ---
+            // --- NOTIFICATION ICON (✅ Đã xóa Badge) ---
             if (!isGuest)
-              Consumer<NotificationViewModel>(
-                builder: (_, vm, __) => Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        onPressed: () => Navigator.pushNamed(context, '/notification'),
-                        icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-                    ),
-                    // ✅ Chỉ hiện Badge khi có thông báo chưa đọc
-                    if (vm.unreadCount > 0)
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                              border: Border.fromBorderSide(BorderSide(color: Colors.white, width: 1.5)) // Viền trắng cho đẹp
-                          ),
-                          child: Text(
-                              '${vm.unreadCount}',
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
-                          ),
-                        ),
-                      )
-                  ],
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              )
+                child: IconButton(
+                  onPressed: () => Navigator.pushNamed(context, '/notification'),
+                  icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ),
           ],
         ),
       ),

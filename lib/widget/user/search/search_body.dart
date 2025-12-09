@@ -1,4 +1,3 @@
-// lib/views/search/widgets/search_body.dart
 import 'package:flutter/material.dart';
 import '../../../view_models/user/search_view_model.dart';
 import 'search_result_list.dart';
@@ -11,44 +10,67 @@ class SearchBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Key cho AnimatedSwitcher, giúp nó nhận diện widget con đã thay đổi
-    final Key currentKey = ValueKey(viewModel.uiState);
+    // AnimatedSwitcher giúp chuyển đổi giữa các trạng thái mượt mà hơn
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: _buildContent(context),
+    );
+  }
 
+  Widget _buildContent(BuildContext context) {
     switch (viewModel.uiState) {
       case SearchUIState.suggesting:
-        return SuggestionList(
-          key: currentKey,
-          viewModel: viewModel,
-        );
+        return SuggestionList(viewModel: viewModel);
 
       case SearchUIState.loading:
-        return Center(key: currentKey, child: const CircularProgressIndicator());
+        return const Center(
+          child: CircularProgressIndicator(color: Color(0xFF6C63FF)),
+        );
 
       case SearchUIState.error:
         return Center(
-          key: currentKey,
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Text(
-              'Lỗi: ${viewModel.errorMessage}',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.red.shade700),
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              Text(
+                'Đã xảy ra lỗi:\n${viewModel.errorMessage}',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
           ),
         );
 
       case SearchUIState.idle:
       case SearchUIState.success:
         if (viewModel.searchResults.isEmpty) {
+          // Trạng thái Empty đẹp hơn
           return Center(
-            key: currentKey,
-            child: const Text('Không tìm thấy công việc nào.'),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.search_off_rounded, size: 60, color: const Color(0xFF6C63FF).withOpacity(0.5)),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  viewModel.uiState == SearchUIState.idle
+                      ? 'Nhập từ khóa để tìm kiếm việc làm'
+                      : 'Không tìm thấy công việc nào',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                ),
+              ],
+            ),
           );
         }
-        return SearchResultList(
-          key: currentKey,
-          viewModel: viewModel,
-        );
+        return SearchResultList(viewModel: viewModel);
     }
   }
 }

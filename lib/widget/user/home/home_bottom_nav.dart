@@ -2,14 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/user/save_job_view_model.dart'; // ✅ Import ViewModel
+// import '../../../view_models/user/save_job_view_model.dart'; // Có thể bỏ import này nếu không dùng savedJobsVM nữa
 
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class HomeBottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
-  final int unreadMessagesCount; // Nhận số tin nhắn chưa đọc từ MainScreen
+  final int unreadMessagesCount;
 
   const HomeBottomNav({
     Key? key,
@@ -20,9 +20,7 @@ class HomeBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 Lắng nghe số lượng Job đã lưu trực tiếp từ ViewModel
-    final savedJobsVM = context.watch<SavedJobsViewModel>();
-    final int savedCount = savedJobsVM.savedJobs.length;
+    // 🔥 Đã xóa logic lấy savedCount để hiển thị badge
 
     return Container(
       decoration: BoxDecoration(
@@ -57,23 +55,10 @@ class HomeBottomNav extends StatelessWidget {
             label: 'Trang chủ',
           ),
 
-          // 2. SAVED (🔥 Đã cập nhật logic Badge)
-          BottomNavigationBarItem(
-            icon: Badge(
-              label: Text('$savedCount'),
-              // ✅ Chỉ hiện khi có job đã lưu (> 0)
-              isLabelVisible: savedCount > 0,
-              backgroundColor: Colors.redAccent,
-              textColor: Colors.white,
-              child: const Icon(Icons.bookmark_border),
-            ),
-            activeIcon: Badge(
-              label: Text('$savedCount'),
-              isLabelVisible: savedCount > 0,
-              backgroundColor: Colors.redAccent,
-              textColor: Colors.white,
-              child: const Icon(Icons.bookmark),
-            ),
+          // 2. SAVED (✅ Đã xóa Badge)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark_border),
+            activeIcon: Icon(Icons.bookmark),
             label: 'Đã lưu',
           ),
 
@@ -105,23 +90,10 @@ class HomeBottomNav extends StatelessWidget {
             label: '',
           ),
 
-          // 4. MESSAGE (🔥 Đã cập nhật logic Badge)
-          BottomNavigationBarItem(
-            icon: Badge(
-              label: Text('$unreadMessagesCount'),
-              // ✅ Chỉ hiện khi có tin nhắn mới (> 0)
-              isLabelVisible: unreadMessagesCount > 0,
-              backgroundColor: Colors.red,
-              textColor: Colors.white,
-              child: const Icon(Icons.chat_bubble_outline),
-            ),
-            activeIcon: Badge(
-              label: Text('$unreadMessagesCount'),
-              isLabelVisible: unreadMessagesCount > 0,
-              backgroundColor: Colors.red,
-              textColor: Colors.white,
-              child: const Icon(Icons.chat_bubble),
-            ),
+          // 4. MESSAGE (✅ Đã xóa Badge)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
             label: 'Tin nhắn',
           ),
 
