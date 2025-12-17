@@ -5,10 +5,12 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../../services/login_service.dart';
 import '../../services/login_firebase_service.dart';
 import '../../models/user-token-entity.dart';
+import '../../services/firebase_messaging_service.dart'; // [MỚI] Import Service
 
 class LoginViewModel extends ChangeNotifier {
   final LoginService _loginService = LoginService();
   final FirebaseLoginService _firebaseLoginService = FirebaseLoginService();
+  final FirebaseMessagingService _messagingService = FirebaseMessagingService(); // [MỚI]
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -42,6 +44,11 @@ class LoginViewModel extends ChangeNotifier {
         _userToken = tokenObject.accessToken;
         _userId = tokenObject.userId;
         notifyListeners();
+
+        // [MỚI] Đăng ký nhận thông báo Chat cho User này
+        if (_userId != null) {
+          await _messagingService.subscribeToUserTopic(_userId!);
+        }
 
         Fluttertoast.showToast(msg: "Đăng nhập thành công");
 
@@ -108,6 +115,12 @@ class LoginViewModel extends ChangeNotifier {
       _userToken = internalToken.accessToken;
       _userId = internalToken.userId;
       notifyListeners();
+
+      // [MỚI] Đăng ký lại Topic khi Auto Login thành công
+      if (_userId != null) {
+        await _messagingService.subscribeToUserTopic(_userId!);
+      }
+
       print("✅ Auto login bằng Token hệ thống thành công");
 
       if (context.mounted) {
@@ -136,6 +149,11 @@ class LoginViewModel extends ChangeNotifier {
 
   // --- 3. ĐĂNG XUẤT ---
   Future<void> logout(BuildContext context) async {
+    // [MỚI] Hủy đăng ký Topic trước khi logout để không nhận tin nữa
+    if (_userId != null) {
+      await _messagingService.unsubscribeFromUserTopic(_userId!);
+    }
+
     await _loginService.logout();
     await _firebaseLoginService.signOut();
     _userToken = null;
@@ -179,6 +197,11 @@ class LoginViewModel extends ChangeNotifier {
         _userToken = tokenObject.accessToken;
         _userId = tokenObject.userId;
         notifyListeners();
+
+        // [MỚI] Đăng ký Topic Chat
+        if (_userId != null) {
+          await _messagingService.subscribeToUserTopic(_userId!);
+        }
 
         if (context.mounted) {
           Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
