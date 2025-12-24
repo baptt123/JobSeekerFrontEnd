@@ -1,5 +1,3 @@
-// lib/views/login/user/home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -71,18 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lắng nghe HomeViewModel và ProfileViewModel
     final homeVM = context.watch<HomeViewModel>();
     final profileVM = context.watch<ProfileViewModel>();
-
-    // Ưu tiên hiển thị user từ Profile vì nó realtime hơn
     final currentUser = profileVM.user ?? homeVM.currentUser;
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF9F9F9),
       extendBodyBehindAppBar: true,
-
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -102,14 +96,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
       drawer: _buildDrawer(context, currentUser),
-
       body: Stack(
         children: [
-          _buildBody(context, homeVM, currentUser),
+          // ✅ Đã bọc nội dung bằng RefreshIndicator để kéo làm mới
+          RefreshIndicator(
+            onRefresh: () => homeVM.refreshJobs(), // Gọi hàm làm mới từ ViewModel
+            color: kPrimaryColor,
+            backgroundColor: Colors.white,
+            edgeOffset: 100, // Đẩy vòng xoay xuống dưới AppBar
+            child: _buildBody(context, homeVM, currentUser),
+          ),
 
-          if (homeVM.state == HomeState.loading)
+          if (homeVM.state == HomeState.loading && homeVM.jobs.isEmpty)
             Container(
               color: Colors.black.withOpacity(0.1),
               child: const Center(child: CircularProgressIndicator(color: kPrimaryColor)),
@@ -120,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBody(BuildContext context, HomeViewModel vm, dynamic user) {
-    // Xử lý lỗi load dữ liệu
     if (vm.state == HomeState.error && vm.jobs.isEmpty) {
       return Center(
         child: Column(
@@ -141,11 +139,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return SingleChildScrollView(
       controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
+      // ✅ Thay đổi Physics để luôn có thể kéo (ngay cả khi danh sách ngắn)
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header & Search
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -155,50 +153,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 left: 20,
                 right: 20,
                 child: GestureDetector(
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SearchScreen())
-                  ),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
                   child: _buildFakeSearchBar(),
                 ),
               ),
             ],
           ),
-
           const SizedBox(height: 30),
           _buildBannerSection(),
           const SizedBox(height: 24),
-
-          // Title List
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      vm.isRecommendedMode ? 'Việc làm phù hợp ✨' : 'Việc làm mới nhất',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    if (vm.isRecommendedMode)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          "Gợi ý dựa trên hồ sơ của bạn",
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
-                        ),
-                      ),
-                  ],
+                Text(
+                  vm.isRecommendedMode ? 'Việc làm phù hợp ✨' : 'Việc làm mới nhất',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                 ),
+                if (vm.isRecommendedMode)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      "Gợi ý dựa trên hồ sơ của bạn",
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                    ),
+                  ),
               ],
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // Job List
           if (vm.jobs.isEmpty && vm.state == HomeState.success)
             const Padding(
                 padding: EdgeInsets.all(40.0),
@@ -222,28 +206,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 return _buildJobItem(context, vm, index);
               },
             ),
-
           if (vm.state == HomeState.loadingMore)
-            const Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Center(child: CircularProgressIndicator(color: kPrimaryColor))
-            ),
-
+            const Padding(padding: EdgeInsets.all(20.0), child: Center(child: CircularProgressIndicator(color: kPrimaryColor))),
           const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  // ✅ Widget Job Item ĐÃ ĐƯỢC NÂNG CẤP GIAO DIỆN
   Widget _buildJobItem(BuildContext context, HomeViewModel vm, int index) {
     final job = vm.jobs[index];
     final logoUrl = job.company?.logoUrl;
     final bool hasValidLogo = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
 
-    // Format lương
     String _formatSalary(double amount) => "\$${(amount/1000).toInt()}k";
-
     final String salaryText = (job.salaryMin != null && job.salaryMax != null)
         ? "${_formatSalary(job.salaryMin!)} - ${_formatSalary(job.salaryMax!)}"
         : (job.salaryMin != null ? "${_formatSalary(job.salaryMin!)} +" : "Thỏa thuận");
@@ -255,72 +231,35 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            spreadRadius: 2,
-            blurRadius: 10,
-            offset: const Offset(0, 4), // Bóng đổ nhẹ
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => JobDetailScreen(jobTitle: job.title))
-            );
-          },
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => JobDetailScreen(jobTitle: job.title))),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Logo Công ty
                 Container(
                   width: 56, height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade100),
-                  ),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade100)),
                   padding: const EdgeInsets.all(4),
                   child: hasValidLogo
-                      ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(logoUrl, fit: BoxFit.contain)
-                  )
+                      ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(logoUrl, fit: BoxFit.contain))
                       : Center(child: Text(job.company?.name?[0] ?? "C", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: kPrimaryColor))),
                 ),
-
                 const SizedBox(width: 14),
-
-                // 2. Nội dung chính
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Tên Job
-                      Text(
-                          job.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis
-                      ),
+                      Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
-                      // Tên Công ty
-                      Text(
-                          job.company?.name ?? 'Công ty ẩn danh',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis
-                      ),
+                      Text(job.company?.name ?? 'Công ty ẩn danh', style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 10),
-
-                      // Tags (Location, Salary, Type)
                       Wrap(
                         spacing: 8, runSpacing: 6,
                         children: [
@@ -332,21 +271,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-
-                // 3. Nút Bookmark (Gọi toggleSaveJob)
                 InkWell(
-                  onTap: () {
-                    // Logic đã được sửa trong ViewModel: tự check token
-                    vm.toggleSaveJob(job, context, context.read<SavedJobsViewModel>());
-                  },
+                  onTap: () => vm.toggleSaveJob(job, context, context.read<SavedJobsViewModel>()),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8, bottom: 8, top: 0),
-                    child: Icon(
-                        isSaved ? Icons.bookmark : Icons.bookmark_border_rounded,
-                        color: isSaved ? kPrimaryColor : Colors.grey[400],
-                        size: 26
-                    ),
+                    child: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border_rounded, color: isSaved ? kPrimaryColor : Colors.grey[400], size: 26),
                   ),
                 ),
               ],
@@ -360,40 +290,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTag(IconData icon, String text, {Color? color, Color? bgColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor ?? Colors.grey[100],
-        borderRadius: BorderRadius.circular(6),
-      ),
+      decoration: BoxDecoration(color: bgColor ?? Colors.grey[100], borderRadius: BorderRadius.circular(6)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color ?? Colors.grey[600]),
           const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-                text,
-                style: TextStyle(
-                    color: color ?? Colors.grey[700],
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1
-            ),
-          ),
+          Flexible(child: Text(text, style: TextStyle(color: color ?? Colors.grey[700], fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 1)),
         ],
       ),
     );
   }
 
-  // --- Helpers ---
   void _showFilterScreen(BuildContext context) {
     final vm = context.read<HomeViewModel>();
     showModalBottomSheet(context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (_) => ChangeNotifierProvider.value(value: vm, child: const FilterScreen()));
   }
 
   void _showLoginRequired(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Vui lòng đăng nhập để sử dụng tính năng này"), action: SnackBarAction(label: 'Đăng nhập', onPressed: () => Navigator.pushNamed(context, '/login'))));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text("Vui lòng đăng nhập"), action: SnackBarAction(label: 'Đăng nhập', onPressed: () => Navigator.pushNamed(context, '/login'))));
   }
 
   Widget _buildDrawer(BuildContext context, dynamic user) {
