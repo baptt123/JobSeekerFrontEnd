@@ -1,70 +1,55 @@
-// lib/view_models/user/scan_pdf_view_model.dart
-
-import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../services/pdf_scan_service.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../services/cv_service.dart';
 
 class ScanPdfViewModel extends ChangeNotifier {
-  final PdfScanService _pdfScanService = PdfScanService();
+  final CvGenerationService _cvService = CvGenerationService();
 
   bool _isLoading = false;
+  String? _keywords;
+  String? _error;
+
   bool get isLoading => _isLoading;
+  String? get keywords => _keywords;
+  String? get error => _error;
 
-  String? _fileName;
-  String? get fileName => _fileName;
+  Future<void> pickAndUploadPdf() async {
+    _error = null;
+    _keywords = null;
 
-  File? _selectedFile; // Lưu file đã chọn
+    // Check định dạng file PDF
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
 
-  // 1. Chỉ chọn file (chưa upload)
-  Future<void> pickPdf() async {
-    final file = await _pdfScanService.pickPdfFile();
-    if (file != null) {
-      _selectedFile = file;
-      _fileName = file.path.split('/').last;
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      if (file.extension != 'pdf') {
+        _error = "Vui lòng chọn file đúng định dạng .pdf";
+        notifyListeners();
+        return;
+      }
+
+      _isLoading = true;
       notifyListeners();
+
+      try {
+        // Gọi Service gửi xuống Backend
+        final res = await _cvService.uploadCv(file);
+        _keywords = res['keywords'];
+      } catch (e) {
+        _error = "Lỗi upload: $e";
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
-  // 2. Thực hiện Upload & Scan
-  Future<void> uploadAndScan(BuildContext context) async {
-    if (_selectedFile == null) return;
-
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      // Gọi Service
-      final result = await _pdfScanService.scanAndSavePdf(_selectedFile!);
-
-      // Thành công
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Phân tích và lưu CV thành công!'), backgroundColor: Colors.green),
-        );
-        // Có thể navigate sang trang quản lý CV hoặc hiển thị kết quả
-        Navigator.pushReplacementNamed(context, '/manage_cv');
-      }
-
-      // Reset
-      _fileName = null;
-      _selectedFile = null;
-
-    } catch (e) {
-      // Thất bại
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void clearFile() {
-    _fileName = null;
-    _selectedFile = null;
+  void clearState() {
+    _error = null;
+    _keywords = null;
     notifyListeners();
   }
 }

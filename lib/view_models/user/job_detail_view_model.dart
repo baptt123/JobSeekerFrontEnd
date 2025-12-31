@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:dio/dio.dart'; // Import Dio để bắt lỗi
+import 'package:dio/dio.dart';
 
 import '../../models/comments-entity.dart';
 import '../../models/job-entity.dart';
 import '../../models/user-cv-entity.dart';
 import '../../services/job_service.dart';
 import '../../services/job_application_service.dart';
-import '../../services/cv_service.dart';
+import '../../services/cv_service.dart'; // Sử dụng CvService chuẩn
 import '../../services/comment_service.dart';
 import 'home_view_model.dart';
 import 'save_job_view_model.dart';
@@ -16,7 +16,7 @@ import 'save_job_view_model.dart';
 class JobDetailViewModel extends ChangeNotifier {
   final JobApplicationService _jobApplicationService = JobApplicationService();
   final JobService _jobService = JobService();
-  final CvGenerationService _cvService = CvGenerationService();
+  final CvGenerationService _cvService = CvGenerationService(); // Sửa lại thành CvService cho khớp file gốc
   final CommentService _commentService = CommentService();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -30,8 +30,8 @@ class JobDetailViewModel extends ChangeNotifier {
   // --- Apply State ---
   bool _isLoadingCvs = false;
   bool get isLoadingCvs => _isLoadingCvs;
-  List<UserCVEntity> _myCvs = [];
-  List<UserCVEntity> get myCvs => _myCvs;
+  List<UserCvEntity> _myCvs = []; // Chuẩn hóa tên Entity
+  List<UserCvEntity> get myCvs => _myCvs;
   bool _isApplying = false;
   bool get isApplying => _isApplying;
   bool _isApplied = false;
@@ -42,30 +42,31 @@ class JobDetailViewModel extends ChangeNotifier {
   bool get isSaved => _isSaved;
   bool _isSaving = false;
 
-  // --- COMMENT STATE ---
+  // --- COMMENT STATE (Mới) ---
   List<CommentEntity> _comments = [];
   List<CommentEntity> get comments => _comments;
   bool _isLoadingComments = false;
   bool get isLoadingComments => _isLoadingComments;
 
-  // --- AUTH STATE ---
+  // --- AUTH STATE (Mới) ---
   bool _isLoggedIn = false;
   bool get isLoggedIn => _isLoggedIn;
 
   String? _errorMessage;
+  String? get errorMessage => _errorMessage;
 
   // 1. Fetch Job Detail & Comments
   Future<void> fetchJobDetail(String jobTitle) async {
     _isLoading = true;
     notifyListeners();
     try {
-      _job = await _jobService.getJobDetail(jobTitle);
+      _job = await _jobService.getJobDetail(jobTitle); // Giả sử service nhận title hoặc id tuỳ logic cũ
 
       if (_job != null) {
-        _isApplied = _job!.isApplied;
-        _isSaved = _job!.isSaved;
+        _isApplied = _job!.isApplied ?? false;
+        _isSaved = _job!.isSaved ?? false;
 
-        // Gọi loadComments và checkLogin song song
+        // Gọi loadComments và checkLogin song song để tối ưu
         await Future.wait([
           loadComments(_job!.jobId),
           checkLoginStatus(),
@@ -79,7 +80,7 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // --- Logic Comment ---
+  // --- Logic Comment (Mới) ---
 
   Future<void> loadComments(int jobId) async {
     _isLoadingComments = true;
@@ -88,7 +89,7 @@ class JobDetailViewModel extends ChangeNotifier {
       _comments = await _commentService.getComments(jobId);
     } catch (e) {
       debugPrint("Lỗi lấy comment: $e");
-      // Có thể set _comments = [] nếu muốn an toàn
+      _comments = [];
     } finally {
       _isLoadingComments = false;
       notifyListeners();
@@ -107,14 +108,13 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // ✅ Thay đổi: Trả về bool để UI biết có thành công hay không
   Future<bool> sendComment(BuildContext context, String content) async {
     if (_job == null || content.trim().isEmpty) return false;
 
     try {
       await _commentService.postComment(_job!.jobId, content);
 
-      // Gửi thành công -> Reload list
+      // Gửi thành công -> Reload list comment
       await loadComments(_job!.jobId);
       return true;
 
@@ -122,7 +122,7 @@ class JobDetailViewModel extends ChangeNotifier {
       String msg = "Gửi bình luận thất bại";
       if (e.response?.statusCode == 401) {
         msg = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
-        _isLoggedIn = false; // Cập nhật lại trạng thái UI ngay
+        _isLoggedIn = false;
         notifyListeners();
       }
 
@@ -142,17 +142,15 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // ... (Các hàm fetchMyCvs, submitApplication, toggleSaveJob GIỮ NGUYÊN) ...
-  // Để tiết kiệm không gian, tôi giả định các hàm bên dưới không đổi
-  // Nếu bạn cần tôi paste lại toàn bộ file, hãy báo nhé.
-
-  // 2. Lấy danh sách CV
+  // 2. Lấy danh sách CV (Logic Cũ & Mới kết hợp)
   Future<void> fetchMyCvs() async {
     _isLoadingCvs = true;
     _myCvs = [];
     notifyListeners();
     try {
-      _myCvs = await _cvService.getMyCvs();
+      final data = await _cvService.getMyCvs();
+      // Map data dynamic sang Entity
+      _myCvs = (data).map((e) => UserCvEntity.fromJson(e)).toList();
     } catch (e) {
       debugPrint("Lỗi lấy CV: $e");
     } finally {
@@ -161,7 +159,7 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // 3. Gửi Ứng Tuyển
+  // 3. Gửi Ứng Tuyển (Logic Cũ)
   Future<bool> submitApplication(BuildContext context, int? selectedCvId, String coverLetter) async {
     if (_isApplying || _job == null) return false;
     if (selectedCvId == null) {
@@ -172,6 +170,7 @@ class JobDetailViewModel extends ChangeNotifier {
       }
       return false;
     }
+
     _isApplying = true;
     notifyListeners();
     try {
@@ -197,12 +196,12 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // 4. Toggle Save
+  // 4. Toggle Save (Logic Cũ)
   Future<void> toggleSaveJob(BuildContext context) async {
     if (_isSaving || _job == null) return;
     _isSaving = true;
     final originalState = _isSaved;
-    _isSaved = !_isSaved;
+    _isSaved = !_isSaved; // Optimistic update
     notifyListeners();
     try {
       if (_isSaved) {
@@ -210,16 +209,20 @@ class JobDetailViewModel extends ChangeNotifier {
       } else {
         await _jobService.unsaveJob(_job!.jobId);
       }
+      // Cập nhật state ở màn Home/Saved nếu cần
       if (context.mounted) {
-        context.read<HomeViewModel>().fetchInitialData();
-        context.read<SavedJobsViewModel>().fetchSavedJobs();
+        // Kiểm tra provider tồn tại trước khi gọi để tránh lỗi
+        try {
+          context.read<HomeViewModel>().fetchInitialData();
+          context.read<SavedJobsViewModel>().fetchSavedJobs();
+        } catch (_) {}
       }
     } catch (e) {
-      _isSaved = originalState;
+      _isSaved = originalState; // Revert nếu lỗi
       notifyListeners();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Lỗi thao tác"), backgroundColor: Colors.red)
+            const SnackBar(content: Text("Lỗi thao tác"), backgroundColor: Colors.red)
         );
       }
     } finally {

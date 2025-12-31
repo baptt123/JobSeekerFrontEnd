@@ -4,13 +4,13 @@ import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
 import 'message_screen.dart';
 import 'company_detail_screen.dart';
-// ✅ Import Widget Comment Section từ file riêng
+// ✅ Import Widget Comment Section
 import '../../../widget/user/job/comment_section.dart';
 
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class JobDetailScreen extends StatefulWidget {
-  final String jobTitle;
+  final String jobTitle; // Hoặc jobId tuỳ logic routing của bạn
   const JobDetailScreen({super.key, required this.jobTitle});
 
   @override
@@ -43,12 +43,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   }
 
   void _showApplyBottomSheet(BuildContext parentContext, JobDetailViewModel vm) {
+    // Gọi API lấy CV trước khi hiện bottom sheet
     vm.fetchMyCvs();
     showModalBottomSheet(
       context: parentContext,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (BuildContext context) {
+        // Truyền lại ViewModel vào BottomSheet
         return ChangeNotifierProvider.value(
           value: vm,
           child: Padding(
@@ -63,11 +65,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
+      // Init ViewModel và gọi fetchJobDetail
       create: (_) => JobDetailViewModel()..fetchJobDetail(widget.jobTitle),
       child: Consumer<JobDetailViewModel>(
         builder: (context, vm, _) {
           final job = vm.job;
-          if (vm.isLoading) return const Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator(color: kPrimaryColor)));
+
+          if (vm.isLoading) {
+            return const Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator(color: kPrimaryColor)));
+          }
+
           if (job == null) return _buildErrorState(context);
 
           return Scaffold(
@@ -123,8 +130,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                 onTap: () => _navigateToCompany(context, job),
                 child: Container(
                   width: 80, height: 80, padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
-                  child: isValidUrl ? Image.network(logoUrl!, fit: BoxFit.contain) : const Icon(Icons.business, size: 40, color: Colors.grey),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 10)]),
+                  child: isValidUrl ? Image.network(logoUrl, fit: BoxFit.contain) : const Icon(Icons.business, size: 40, color: Colors.grey),
                 ),
               ),
               const SizedBox(height: 12),
@@ -185,8 +192,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             const SizedBox(height: 12),
             Wrap(spacing: 8, runSpacing: 8, children: displayTags.map((tag) => Chip(backgroundColor: kPrimaryColor.withOpacity(0.05), side: const BorderSide(color: kPrimaryColor), label: Text(tag, style: const TextStyle(color: kPrimaryColor)))).toList()),
           ],
+          const SizedBox(height: 24),
 
-          // ✅ Gọi CommentSection
+          // ✅ Tích hợp CommentSection ở đây
           CommentSection(jobId: job.jobId),
 
           const SizedBox(height: 80),
@@ -195,8 +203,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
-  // (Các hàm widget con khác: _buildDetailBox, _buildCompanyInfo, v.v... GIỮ NGUYÊN NHƯ CŨ)
-  // ...
   Widget _buildDetailBox({required IconData icon, required String text, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -267,7 +273,6 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
 }
 
-// Widget ApplyJobForm giữ nguyên
 class ApplyJobForm extends StatefulWidget {
   const ApplyJobForm({super.key});
   @override State<ApplyJobForm> createState() => _ApplyJobFormState();
@@ -281,8 +286,19 @@ class _ApplyJobFormState extends State<ApplyJobForm> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<JobDetailViewModel>();
+
+    // Auto select default CV logic
     if (!vm.isLoadingCvs && vm.myCvs.isNotEmpty && _selectedCvId == null) {
-      Future.microtask(() { if (mounted) setState(() => _selectedCvId = vm.myCvs.firstWhere((cv) => cv.isDefault, orElse: () => vm.myCvs.first).cvId); });
+      Future.microtask(() {
+        if (mounted) {
+          // Lấy CV mặc định hoặc CV đầu tiên
+          final defaultCv = vm.myCvs.firstWhere(
+                  (cv) => cv.isDefault == true,
+              orElse: () => vm.myCvs.first
+          );
+          setState(() => _selectedCvId = defaultCv.cvId);
+        }
+      });
     }
 
     return Container(
@@ -298,7 +314,7 @@ class _ApplyJobFormState extends State<ApplyJobForm> {
           const SizedBox(height: 20),
           const Text("Chọn hồ sơ (CV)", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 10),
-          Expanded(child: vm.isLoadingCvs ? const Center(child: CircularProgressIndicator(color: kPrimaryColor)) : vm.myCvs.isEmpty ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Text("Bạn chưa có CV nào.", style: TextStyle(color: Colors.grey)), TextButton(onPressed: () { Navigator.pop(context); Navigator.pushNamed(context, '/manage_cv'); }, child: const Text("Tải lên CV ngay", style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)))])) : ListView.builder(itemCount: vm.myCvs.length, itemBuilder: (context, index) { final cv = vm.myCvs[index]; final isSelected = _selectedCvId == cv.cvId; return Container(margin: const EdgeInsets.only(bottom: 8), decoration: BoxDecoration(border: Border.all(color: isSelected ? kPrimaryColor : Colors.grey.shade300, width: isSelected ? 2 : 1), borderRadius: BorderRadius.circular(12), color: isSelected ? kPrimaryColor.withOpacity(0.05) : Colors.white), child: RadioListTile<int>(title: Text(cv.title ?? "CV không tên", style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text(cv.isDefault ? "Mặc định • ${cv.createdAt.toString().substring(0, 10)}" : "Ngày tải: ${cv.createdAt.toString().substring(0, 10)}", style: TextStyle(color: cv.isDefault ? kPrimaryColor : Colors.grey)), value: cv.cvId, groupValue: _selectedCvId, activeColor: kPrimaryColor, onChanged: (val) => setState(() => _selectedCvId = val), secondary: const Icon(Icons.description, color: Colors.redAccent), contentPadding: const EdgeInsets.symmetric(horizontal: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))); })),
+          Expanded(child: vm.isLoadingCvs ? const Center(child: CircularProgressIndicator(color: kPrimaryColor)) : vm.myCvs.isEmpty ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Text("Bạn chưa có CV nào.", style: TextStyle(color: Colors.grey)), TextButton(onPressed: () { Navigator.pop(context); Navigator.pushNamed(context, '/manage_cv'); }, child: const Text("Tải lên CV ngay", style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold)))])) : ListView.builder(itemCount: vm.myCvs.length, itemBuilder: (context, index) { final cv = vm.myCvs[index]; final isSelected = _selectedCvId == cv.cvId; return Container(margin: const EdgeInsets.only(bottom: 8), decoration: BoxDecoration(border: Border.all(color: isSelected ? kPrimaryColor : Colors.grey.shade300, width: isSelected ? 2 : 1), borderRadius: BorderRadius.circular(12), color: isSelected ? kPrimaryColor.withOpacity(0.05) : Colors.white), child: RadioListTile<int>(title: Text(cv.title ?? "CV không tên", style: const TextStyle(fontWeight: FontWeight.bold)), subtitle: Text(cv.isDefault == true ? "Mặc định • ${cv.createdAt.toString().substring(0, 10)}" : "Ngày tải: ${cv.createdAt.toString().substring(0, 10)}", style: TextStyle(color: cv.isDefault == true ? kPrimaryColor : Colors.grey)), value: cv.cvId!, groupValue: _selectedCvId, activeColor: kPrimaryColor, onChanged: (val) => setState(() => _selectedCvId = val), secondary: const Icon(Icons.description, color: Colors.redAccent), contentPadding: const EdgeInsets.symmetric(horizontal: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))); })),
           const SizedBox(height: 16),
           const Text("Thư giới thiệu (Tùy chọn)", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 8),

@@ -1,77 +1,42 @@
-// lib/view_models/user/cv_generation_view_model.dart
-
+import 'package:flutter/material.dart';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:job_seeker_frontend/services/cv_service.dart';
-import 'package:job_seeker_frontend/dto/create_cv_dto.dart';
-
-enum CvState { initial, loading, success, error }
+import '../../services/cv_service.dart';
 
 class CvGenerationViewModel extends ChangeNotifier {
   final CvGenerationService _cvService = CvGenerationService();
+  bool _isLoading = false;
 
-  CvState _state = CvState.initial;
-  CvState get state => _state;
+  bool get isLoading => _isLoading;
 
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
-
-  Uint8List? _previewPdfBytes;
-  Uint8List? get previewPdfBytes => _previewPdfBytes;
-
-  Uint8List? _pdfData; // Dùng cho phần AI Generate
-  Uint8List? get pdfData => _pdfData;
-
-// Hàm xem trước
-  Future<bool> generatePreview(String templateId, CreateCvDto cvData) async {
-    _state = CvState.loading;
+  // Tạo CV bằng Gemini
+  Future<Uint8List?> generateByGemini(String prompt) async {
+    _isLoading = true;
     notifyListeners();
     try {
-      final result = await _cvService.previewCvPdf(templateId, cvData);
-      _previewPdfBytes = result;
-      _state = CvState.success;
-      notifyListeners();
-      return true;
+      final List<int> bytes = await _cvService.generateCvGemini(prompt);
+      return Uint8List.fromList(bytes);
     } catch (e) {
-      _errorMessage = e.toString();
-      _state = CvState.error;
+      print("Gemini Gen Error: $e");
+      return null;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // Hàm lưu (Đã sửa lỗi thiếu hàm này)
-  Future<bool> saveCv(String templateId, CreateCvDto cvData) async {
-    try {
-      await _cvService.saveGeneratedCv(templateId, cvData);
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // 3. Tạo CV bằng AI (Prompt Chat)
-  Future<bool> generateCv(String prompt) async {
-    _state = CvState.loading;
-    _errorMessage = null;
-    _pdfData = null;
+  // Tạo CV bằng Template
+  Future<Uint8List?> generateByTemplate(int templateId, Map<String, dynamic> inputData) async {
+    _isLoading = true;
     notifyListeners();
-
     try {
-      final data = await _cvService.generateCv(prompt);
-      if (data.isEmpty) throw Exception("Dữ liệu PDF rỗng");
-
-      _pdfData = data;
-      _state = CvState.success;
-      notifyListeners();
-      return true;
+      final List<int> bytes = await _cvService.generateCvTemplate(templateId, inputData);
+      return Uint8List.fromList(bytes);
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      _state = CvState.error;
+      print("Template Gen Error: $e");
+      return null;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 }
