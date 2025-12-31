@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:job_seeker_frontend/models/notification-entity.dart';
-import 'package:job_seeker_frontend/services/firebase_messaging_service.dart';
 import 'package:job_seeker_frontend/services/notification_service.dart';
 
 enum NotificationState { loading, loaded, error, unauthorized }
 
 class NotificationViewModel extends ChangeNotifier {
   final NotificationService _notificationService = NotificationService();
-  final FirebaseMessagingService _fcmService = FirebaseMessagingService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   NotificationState _state = NotificationState.loading;
@@ -34,65 +32,50 @@ class NotificationViewModel extends ChangeNotifier {
       return;
     }
 
-    // Lấy Device Token để nhận thông báo đẩy
-    await _fcmService.getDeviceToken();
-
-    // Tải dữ liệu lần đầu
+    // Tải dữ liệu từ Database (luôn tải dù có quyền Push hay không)
     await fetchNotifications();
 
-    // Lắng nghe thông báo mới (Real-time)
+    // [CẬP NHẬT] Lắng nghe Firebase để làm mới danh sách khi có tin nhắn mới
+    // Việc này đảm bảo khi App đang mở (Foreground), danh sách thông báo sẽ tự cập nhật ngay.
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // Khi có thông báo mới -> Reload list để cập nhật UI & Badge
+      print("📩 Nhận thông báo mới khi đang ở màn hình danh sách, reload...");
       fetchNotifications();
     });
   }
 
   Future<void> fetchNotifications() async {
+    // Chỉ hiện loading ở lần đầu tiên
     if (_notifications.isEmpty) {
       _state = NotificationState.loading;
       notifyListeners();
     }
 
     try {
-      // Gọi service không cần userId
       final result = await _notificationService.getNotifications();
       _notifications = result;
-
-      // Tính toán số lượng chưa đọc
       _unreadCount = _notifications.where((n) => !n.isRead).length;
-
       _state = NotificationState.loaded;
     } catch (e) {
-      if (e.toString().contains("401")) {
-        _state = NotificationState.unauthorized;
-      } else {
-        _state = NotificationState.error;
-      }
+      _state = e.toString().contains("401") ? NotificationState.unauthorized : NotificationState.error;
     } finally {
       notifyListeners();
     }
   }
 
+  // Đánh dấu đã đọc
   Future<void> markAsRead(int notificationId) async {
-    // 1. Cập nhật UI ngay lập tức (Optimistic Update)
+    // Cập nhật local trước để UI mượt mà (Optimistic Update)
     final index = _notifications.indexWhere((n) => n.notificationId == notificationId);
     if (index != -1 && !_notifications[index].isRead) {
-      // Vì NotificationEntity là final, ta cần cẩn thận hoặc backend trả về list mới
-      // Ở đây ta tạm thời gán cờ local nếu Model cho phép, hoặc fetch lại
-      // Cách tốt nhất là fetch lại hoặc update local count
-
-      // Giả sử logic update local:
-      // (Bạn cần bỏ 'final' ở field isRead trong Model hoặc tạo copyWith)
-      // _notifications[index].isRead = true;
-
       _unreadCount = (_unreadCount > 0) ? _unreadCount - 1 : 0;
       notifyListeners();
 
-      // 2. Gọi API ngầm
-      await _notificationService.markAsRead(notificationId);
-
-      // 3. Reload để đồng bộ chính xác
-      await fetchNotifications();
+      // Gọi API thực tế
+      bool success = await _notificationService.markAsRead(notificationId);
+      if (success) {
+        // Tải lại để cập nhật trạng thái chính xác từ Backend
+        await fetchNotifications();
+      }
     }
   }
 

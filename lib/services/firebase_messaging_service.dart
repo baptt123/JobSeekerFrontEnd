@@ -1,115 +1,147 @@
 // lib/services/firebase_messaging_service.dart
 
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:job_seeker_frontend/services/local_notification_service.dart';
+import 'package:job_seeker_frontend/services/user_service.dart';
 import 'package:job_seeker_frontend/utils/global_keys.dart';
 import 'package:job_seeker_frontend/views/login/user/job_detail_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/message_screen.dart'; // Import MessageScreen
+import 'package:job_seeker_frontend/views/login/user/message_screen.dart';
 
 class FirebaseMessagingService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final UserService _userService = UserService();
 
-  Future<void> initialize(Function(RemoteMessage) onMessageCallback) async {
-    // 1. Xin quyền
-    await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // 2. Đăng ký Topic chung (Job Alerts)
-    await _firebaseMessaging.subscribeToTopic('job_alerts');
-
-    // 3. Lắng nghe tin nhắn khi App đang mở (Foreground)
+  // 1. Chỉ khởi tạo các bộ lắng nghe sự kiện (Không chứa logic hỏi quyền)
+  void initNotificationListeners(Function(RemoteMessage) onMessageCallback) {
+    // Khi app đang mở (Foreground)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('🔔 Foreground Message received: ${message.notification?.title}');
-
-      // Nếu có Notification -> Hiện Banner
       if (message.notification != null) {
         LocalNotificationService.showNotification(
           title: message.notification!.title ?? 'Thông báo',
-          body: message.notification!.body ?? 'Bạn có tin nhắn mới.',
-          // payload: message.data.toString(), // (Tuỳ chọn: Nếu LocalNotification hỗ trợ payload)
+          body: message.notification!.body ?? '',
         );
       }
       onMessageCallback(message);
     });
 
-    // 4. Click thông báo khi App chạy ngầm
+    // Khi click vào thông báo từ thanh trạng thái (Background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleNotificationClick(message.data);
     });
 
-    // 5. Click thông báo khi App tắt hẳn
-    final RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
-    if (initialMessage != null) {
-      Future.delayed(const Duration(seconds: 2), () {
-        _handleNotificationClick(initialMessage.data);
-      });
+    // Khi click vào thông báo lúc app đã bị tắt hẳn (Terminated)
+    _firebaseMessaging.getInitialMessage().then((message) {
+      if (message != null) {
+        Future.delayed(const Duration(seconds: 2), () {
+          _handleNotificationClick(message.data);
+        });
+      }
+    });
+  }
+
+  // 2. 🔥 HÀM ÉP BUỘC HỎI QUYỀN TRÊN MỌI PHIÊN BẢN
+  Future<void> forceRequestPermission(BuildContext context) async {
+    bool userAgreed = false;
+
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = androidInfo.version.sdkInt;
+
+      if (sdkInt >= 33) {
+        // Android 13+: Gọi hộp thoại hệ thống trực tiếp
+        PermissionStatus status = await Permission.notification.request();
+        userAgreed = status.isGranted;
+      } else {
+        // Android < 13: Tự tạo hộp thoại hỏi vì hệ thống không có dialog này
+        userAgreed = await _showCustomRationaleDialog(context) ?? false;
+      }
+    } else if (Platform.isIOS) {
+      // iOS: Sử dụng hộp thoại hệ thống của Firebase
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+      userAgreed = settings.authorizationStatus == AuthorizationStatus.authorized;
+    }
+
+    if (userAgreed) {
+      print("✅ Người dùng đồng ý nhận thông báo.");
+      await _setupNotificationAfterAgreement();
+    } else {
+      print("❌ Người dùng từ chối nhận thông báo.");
+      // Xóa token trên server để đảm bảo không gửi Push
+      await _userService.updateFcmToken(null);
+      await _firebaseMessaging.unsubscribeFromTopic('job_alerts');
     }
   }
 
-  // --- [MỚI] Hàm đăng ký nhận tin riêng cho User ---
-  // Gọi hàm này sau khi Login thành công
+  // Hộp thoại giải thích tùy chỉnh cho Android cũ
+  Future<bool?> _showCustomRationaleDialog(BuildContext context) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Bật thông báo ứng dụng"),
+        content: const Text(
+            "Bạn có muốn nhận thông báo về việc làm mới, tin nhắn từ nhà tuyển dụng và cập nhật trạng thái hồ sơ không?"
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("TỪ CHỐI", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("ĐỒNG Ý", style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Luồng cấu hình sau khi có sự đồng ý
+  Future<void> _setupNotificationAfterAgreement() async {
+    String? token = await _firebaseMessaging.getToken();
+    if (token != null) {
+      await _userService.updateFcmToken(token);
+      print("🚀 Đồng bộ Token thành công: $token");
+    }
+    await _firebaseMessaging.subscribeToTopic('job_alerts');
+  }
+
   Future<void> subscribeToUserTopic(int userId) async {
-    String topic = 'user_$userId'; // Ví dụ: user_10
-    await _firebaseMessaging.subscribeToTopic(topic);
-    print("✅ Đã đăng ký nhận tin chat cho topic: $topic");
+    await _firebaseMessaging.subscribeToTopic('user_$userId');
   }
 
-  // --- [MỚI] Hàm hủy đăng ký (Gọi khi Logout) ---
   Future<void> unsubscribeFromUserTopic(int userId) async {
-    String topic = 'user_$userId';
-    await _firebaseMessaging.unsubscribeFromTopic(topic);
-    print("👋 Đã hủy đăng ký topic: $topic");
+    await _firebaseMessaging.unsubscribeFromTopic('user_$userId');
   }
 
-  // --- XỬ LÝ ĐIỀU HƯỚNG ---
   void _handleNotificationClick(Map<String, dynamic> data) {
-    print("🚀 Payload Data: $data");
-
     final navigator = ManagingGlobalKey.navigatorKey.currentState;
     if (navigator == null) return;
 
-    // CASE 1: Chat Message
-    // Kiểm tra các key thường dùng: click_action, type, hoặc senderId
-    if (data['click_action'] == 'CHAT_DETAIL' || data['type'] == 'CHAT_MSG') {
-
-      // Parse dữ liệu an toàn (tránh lỗi String/Int)
+    final String type = data['type']?.toString() ?? '';
+    if (type == 'CHAT_MSG' || data['click_action'] == 'CHAT_DETAIL') {
       final otherUserIdStr = data['senderId'] ?? data['other_user_id'];
-
       if (otherUserIdStr != null) {
-        final int otherUserId = int.parse(otherUserIdStr.toString());
-        final String otherUserName = data['senderName'] ?? data['other_user_name'] ?? 'Nhà tuyển dụng';
-        final String otherUserAvatar = data['senderAvatar'] ?? data['other_user_avatar'] ?? '';
-
-        print("💬 Mở màn hình chat với ID: $otherUserId");
-
-        navigator.push(
-          MaterialPageRoute(
-            builder: (context) => MessageScreen(
-              otherUserId: otherUserId,
-              otherUserName: otherUserName,
-              otherUserAvatar: otherUserAvatar,
-            ),
+        navigator.push(MaterialPageRoute(
+          builder: (context) => MessageScreen(
+            otherUserId: int.parse(otherUserIdStr.toString()),
+            otherUserName: data['senderName'] ?? 'Nhà tuyển dụng',
+            otherUserAvatar: data['senderAvatar'] ?? '',
           ),
-        );
+        ));
       }
-    }
-    // CASE 2: Job Detail (Như cũ)
-    else if (data['type'] == 'NEW_JOB_POST' || data['click_action'] == 'JOB_DETAIL') {
+    } else if (type == 'NEW_JOB_POST' || type == 'APPLICATION_UPDATE') {
       if (data['job_title'] != null) {
-        navigator.push(
-          MaterialPageRoute(
-            builder: (context) => JobDetailScreen(jobTitle: data['job_title']),
-          ),
-        );
+        navigator.push(MaterialPageRoute(
+          builder: (context) => JobDetailScreen(jobTitle: data['job_title']),
+        ));
       }
     }
-  }
-
-  Future<String?> getDeviceToken() async {
-    return await _firebaseMessaging.getToken();
   }
 }

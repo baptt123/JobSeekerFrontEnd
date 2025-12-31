@@ -44,4 +44,12 @@ class UserService {
       throw Exception(e.response?.data['message'] ?? e.message);
     }
   }
+  // [MỚI] API cập nhật FCM Token lên Database
+  Future<void> updateFcmToken(String? token) async {
+    try {
+      await _dio.put('/update-fcm-token', data: {'fcm_token': token});
+    } catch (e) {
+      print("Lỗi đồng bộ FCM Token: $e");
+    }
+  }
 }

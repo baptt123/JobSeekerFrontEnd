@@ -1,16 +1,16 @@
-// lib/view_models/user/login_view_model.dart
-
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../services/login_service.dart';
 import '../../services/login_firebase_service.dart';
 import '../../models/user-token-entity.dart';
-import '../../services/firebase_messaging_service.dart'; // [MỚI] Import Service
+import '../../services/firebase_messaging_service.dart';
+import '../../services/user_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final LoginService _loginService = LoginService();
   final FirebaseLoginService _firebaseLoginService = FirebaseLoginService();
-  final FirebaseMessagingService _messagingService = FirebaseMessagingService(); // [MỚI]
+  final FirebaseMessagingService _messagingService = FirebaseMessagingService();
+  final UserService _userService = UserService();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -26,12 +26,22 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 🔥 Luồng thiết lập thông báo: Kích hoạt ép buộc hỏi quyền
+  Future<void> _setupNotificationFlow(BuildContext context, int userId) async {
+    // 1. Khởi tạo listener cho tin nhắn foreground
+    _messagingService.initNotificationListeners((message) {
+      print("🔔 Foreground message received.");
+    });
+
+    // 2. Ép buộc hiện Dialog hỏi quyền (hệ thống hoặc custom)
+    await _messagingService.forceRequestPermission(context);
+
+    // 3. Đăng ký nhận tin nhắn Chat riêng
+    await _messagingService.subscribeToUserTopic(userId);
+  }
+
   // --- 1. LOGIN BẰNG EMAIL ---
-  Future<void> login(
-      String email,
-      String password,
-      BuildContext context,
-      ) async {
+  Future<void> login(String email, String password, BuildContext context) async {
     if (email.isEmpty || password.isEmpty) {
       Fluttertoast.showToast(msg: "Vui lòng nhập đủ thông tin");
       return;
@@ -45,70 +55,25 @@ class LoginViewModel extends ChangeNotifier {
         _userId = tokenObject.userId;
         notifyListeners();
 
-        // [MỚI] Đăng ký nhận thông báo Chat cho User này
-        if (_userId != null) {
-          await _messagingService.subscribeToUserTopic(_userId!);
+        // Kích hoạt hỏi quyền sau khi đăng nhập
+        if (_userId != null && context.mounted) {
+          await _setupNotificationFlow(context, _userId!);
         }
 
         Fluttertoast.showToast(msg: "Đăng nhập thành công");
-
-        // Xóa hết stack cũ, set Home làm root
         if (context.mounted) {
           Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         }
       }
     } catch (e) {
-      // 🔥 XỬ LÝ LỖI HIỂN THỊ
-      String errorMsg = e.toString().replaceAll("Exception: ", "");
-
-      // Kiểm tra nếu lỗi là 403 hoặc chứa từ khóa liên quan đến việc bị khóa
-      if (errorMsg.contains("403") ||
-          errorMsg.toLowerCase().contains("vô hiệu hóa") ||
-          errorMsg.toLowerCase().contains("khóa")) {
-
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false, // Bắt buộc người dùng phải bấm nút Đóng
-            builder: (ctx) => AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.block, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text("Tài khoản bị khóa", style: TextStyle(color: Colors.red)),
-                ],
-              ),
-              content: const Text(
-                "Tài khoản của bạn đã bị vô hiệu hóa do vi phạm chính sách hoặc yêu cầu từ quản trị viên.\n\nVui lòng liên hệ bộ phận hỗ trợ để biết thêm chi tiết.",
-                style: TextStyle(fontSize: 15),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Đã hiểu", style: TextStyle(fontWeight: FontWeight.bold)),
-                )
-              ],
-            ),
-          );
-        }
-      } else {
-        // Lỗi thông thường (sai pass, mạng...)
-        Fluttertoast.showToast(
-          msg: errorMsg,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      }
+      _handleLoginError(e, context);
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- 2. AUTO LOGIN (Tự động đăng nhập) ---
+  // --- 2. AUTO LOGIN ---
   Future<void> autoLogin(BuildContext context) async {
-    print("🔄 Bắt đầu Auto Login...");
-
-    // A. Thử login bằng Token hệ thống
     final UserToken? internalToken = await _loginService.tryAutoLogin();
 
     if (internalToken != null) {
@@ -116,12 +81,10 @@ class LoginViewModel extends ChangeNotifier {
       _userId = internalToken.userId;
       notifyListeners();
 
-      // [MỚI] Đăng ký lại Topic khi Auto Login thành công
-      if (_userId != null) {
-        await _messagingService.subscribeToUserTopic(_userId!);
+      // Kích hoạt hỏi quyền sau khi tự động đăng nhập
+      if (_userId != null && context.mounted) {
+        await _setupNotificationFlow(context, _userId!);
       }
-
-      print("✅ Auto login bằng Token hệ thống thành công");
 
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
@@ -129,39 +92,49 @@ class LoginViewModel extends ChangeNotifier {
       return;
     }
 
-    // B. Nếu thất bại, thử login bằng Firebase (Google)
-    print("⚠️ Token hệ thống hết hạn, thử Firebase...");
+    // Xử lý Google Auto-login...
     final String? firebaseToken = await _firebaseLoginService.getFirebaseTokenSilently();
-
     if (firebaseToken != null) {
       try {
-        await _handleBackendLogin(firebaseToken, context);
-        print("✅ Auto login bằng Firebase thành công");
-      } catch (e) {
-        print("❌ Auto login Firebase thất bại: $e");
+        final UserToken? tokenObject = await _firebaseLoginService.loginWithGoogleToken(firebaseToken);
+        if (tokenObject != null) {
+          _userToken = tokenObject.accessToken;
+          _userId = tokenObject.userId;
+          notifyListeners();
+
+          if (_userId != null && context.mounted) {
+            await _setupNotificationFlow(context, _userId!);
+          }
+
+          if (context.mounted) Navigator.pushReplacementNamed(context, '/home');
+        }
+      } catch (_) {
         await _loginService.logout();
       }
-    } else {
-      print("❌ Không có phiên đăng nhập. User cần login thủ công.");
-      await _loginService.logout();
     }
   }
 
   // --- 3. ĐĂNG XUẤT ---
   Future<void> logout(BuildContext context) async {
-    // [MỚI] Hủy đăng ký Topic trước khi logout để không nhận tin nữa
-    if (_userId != null) {
-      await _messagingService.unsubscribeFromUserTopic(_userId!);
-    }
+    _setLoading(true);
+    try {
+      if (_userId != null) {
+        // Hủy đăng ký topic và xóa token trên server
+        await _messagingService.unsubscribeFromUserTopic(_userId!);
+        await _userService.updateFcmToken(null);
+      }
 
-    await _loginService.logout();
-    await _firebaseLoginService.signOut();
-    _userToken = null;
-    _userId = null;
-    notifyListeners();
+      await _loginService.logout();
+      await _firebaseLoginService.signOut();
+      _userToken = null;
+      _userId = null;
+      notifyListeners();
 
-    if (context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      }
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -170,60 +143,29 @@ class LoginViewModel extends ChangeNotifier {
     _setLoading(true);
     try {
       final String? firebaseToken = await _firebaseLoginService.signInWithGoogle();
-
       if (firebaseToken != null) {
-        await _handleBackendLogin(firebaseToken, context);
-      } else {
-        Fluttertoast.showToast(msg: "Đã hủy đăng nhập Google");
+        final UserToken? tokenObject = await _firebaseLoginService.loginWithGoogleToken(firebaseToken);
+        if (tokenObject != null) {
+          _userToken = tokenObject.accessToken;
+          _userId = tokenObject.userId;
+          notifyListeners();
+
+          if (_userId != null && context.mounted) {
+            await _setupNotificationFlow(context, _userId!);
+          }
+
+          if (context.mounted) Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        }
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: e.toString());
+      _handleLoginError(e, context);
     } finally {
       _setLoading(false);
     }
   }
 
-  // Helper xử lý login với backend sau khi có token firebase
-  Future<void> _handleBackendLogin(
-      String firebaseToken,
-      BuildContext context,
-      ) async {
-    try {
-      final UserToken? tokenObject = await _firebaseLoginService.loginWithGoogleToken(firebaseToken);
-
-      if (tokenObject != null) {
-        Fluttertoast.showToast(msg: "Đăng nhập thành công");
-
-        _userToken = tokenObject.accessToken;
-        _userId = tokenObject.userId;
-        notifyListeners();
-
-        // [MỚI] Đăng ký Topic Chat
-        if (_userId != null) {
-          await _messagingService.subscribeToUserTopic(_userId!);
-        }
-
-        if (context.mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-        }
-      }
-    } catch (e) {
-      // Xử lý lỗi cấm tài khoản cho Google Login
-      if (e.toString().contains("403")) {
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text("Tài khoản bị khóa", style: TextStyle(color: Colors.red)),
-              content: const Text("Tài khoản Google này đã bị khóa trên hệ thống."),
-              actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Đóng"))],
-            ),
-          );
-        }
-      } else {
-        Fluttertoast.showToast(msg: e.toString());
-      }
-      await _firebaseLoginService.signOut();
-    }
+  void _handleLoginError(dynamic e, BuildContext context) {
+    String errorMsg = e.toString().replaceAll("Exception: ", "");
+    Fluttertoast.showToast(msg: errorMsg, backgroundColor: Colors.red);
   }
 }

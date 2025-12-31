@@ -1,8 +1,13 @@
-// main.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:provider/provider.dart';
+
+// Import Services
 import 'package:job_seeker_frontend/services/local_notification_service.dart';
-import 'package:job_seeker_frontend/services/firebase_messaging_service.dart'; // [MỚI] Import
+import 'package:job_seeker_frontend/services/firebase_messaging_service.dart';
+
+// Import ViewModels
 import 'package:job_seeker_frontend/view_models/user/change_password_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/conversation_list_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/cv_generation_view_model.dart';
@@ -18,15 +23,15 @@ import 'package:job_seeker_frontend/view_models/user/scan_pdf_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/search_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/theme_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/user_profile_view_model.dart';
-// ... (giữ nguyên các import view_models khác) ...
-import 'package:provider/provider.dart';
+
 import 'firebase_options.dart';
 import 'myapp.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
+/// Handler xử lý thông báo khi ứng dụng ở chế độ nền hoặc bị đóng
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print("Handling a background message: ${message.messageId}");
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print("🔥 Background Message: ${message.messageId}");
 }
 
 Future<void> main() async {
@@ -35,24 +40,17 @@ Future<void> main() async {
   // 1. Khởi tạo Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 2. Khởi tạo Local Notifications
+  // 2. Khởi tạo Local Notification cho banner foreground
   await LocalNotificationService.initialize();
 
-  // 3. [MỚI] Khởi tạo Firebase Messaging Service
-  // Bước này quan trọng để ĐĂNG KÝ TOPIC và lắng nghe sự kiện
-  final firebaseMessagingService = FirebaseMessagingService();
-  await firebaseMessagingService.initialize((RemoteMessage message) {
-    // Callback khi nhận tin nhắn ở Foreground (ví dụ: cập nhật badge)
-    print("Main: Nhận tin nhắn foreground: ${message.notification?.title}");
-  });
-
-  // 4. Đăng ký background handler
+  // 3. Đăng ký background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // LƯU Ý: Không gọi initialize() hay hỏi quyền ở đây để tránh tự động hiện Dialog.
 
   runApp(
     MultiProvider(
       providers: [
-        // ... (giữ nguyên danh sách providers) ...
         ChangeNotifierProvider(create: (_) => LoginViewModel()),
         ChangeNotifierProvider(create: (_) => RegisterViewModel()),
         ChangeNotifierProvider(create: (_) => ChangePasswordViewModel()),
@@ -69,7 +67,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
         ChangeNotifierProvider(create: (_) => ManageCvViewModel()),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
