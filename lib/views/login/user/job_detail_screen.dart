@@ -4,13 +4,12 @@ import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
 import 'message_screen.dart';
 import 'company_detail_screen.dart';
-// ✅ Import Widget Comment Section
 import '../../../widget/user/job/comment_section.dart';
 
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class JobDetailScreen extends StatefulWidget {
-  final String jobTitle; // Hoặc jobId tuỳ logic routing của bạn
+  final String jobTitle; // Hoặc jobId (String/int) tùy route
   const JobDetailScreen({super.key, required this.jobTitle});
 
   @override
@@ -43,14 +42,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   }
 
   void _showApplyBottomSheet(BuildContext parentContext, JobDetailViewModel vm) {
-    // Gọi API lấy CV trước khi hiện bottom sheet
-    vm.fetchMyCvs();
+    vm.fetchMyCvs(); // Load CV mới nhất
     showModalBottomSheet(
       context: parentContext,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        // Truyền lại ViewModel vào BottomSheet
         return ChangeNotifierProvider.value(
           value: vm,
           child: Padding(
@@ -65,7 +62,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      // Init ViewModel và gọi fetchJobDetail
       create: (_) => JobDetailViewModel()..fetchJobDetail(widget.jobTitle),
       child: Consumer<JobDetailViewModel>(
         builder: (context, vm, _) {
@@ -103,7 +99,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
               body: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildJobInfo(vm, job),
+                  _buildJobInfo(context, vm, job),
                   _buildCompanyInfo(job),
                 ],
               ),
@@ -157,7 +153,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildJobInfo(JobDetailViewModel vm, JobEntity job) {
+  Widget _buildJobInfo(BuildContext context, JobDetailViewModel vm, JobEntity job) {
     List<String> displayTags = job.skills.isNotEmpty ? job.skills : (job.requirements?.split(', ') ?? []);
     String _formatSalary(double amount) => "\$${(amount/1000).toInt()}k";
     final String salaryText = (job.salaryMin != null && job.salaryMax != null) ? "${_formatSalary(job.salaryMin!)} - ${_formatSalary(job.salaryMax!)}" : (job.salaryMin != null ? "${_formatSalary(job.salaryMin!)} +" : "Thỏa thuận");
@@ -194,8 +190,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
           ],
           const SizedBox(height: 24),
 
-          // ✅ Tích hợp CommentSection ở đây
-          CommentSection(jobId: job.jobId),
+          // Tích hợp CommentSection
+          // Sử dụng Provide.value để truyền VM hiện tại xuống widget con
+          ChangeNotifierProvider.value(
+            value: vm,
+            child: CommentSection(jobId: job.jobId),
+          ),
 
           const SizedBox(height: 80),
         ],
@@ -281,21 +281,22 @@ class ApplyJobForm extends StatefulWidget {
 class _ApplyJobFormState extends State<ApplyJobForm> {
   int? _selectedCvId;
   final TextEditingController _coverLetterController = TextEditingController();
-  @override void dispose() { _coverLetterController.dispose(); super.dispose(); }
+
+  @override
+  void dispose() {
+    _coverLetterController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<JobDetailViewModel>();
 
-    // Auto select default CV logic
+    // Auto select default CV
     if (!vm.isLoadingCvs && vm.myCvs.isNotEmpty && _selectedCvId == null) {
       Future.microtask(() {
         if (mounted) {
-          // Lấy CV mặc định hoặc CV đầu tiên
-          final defaultCv = vm.myCvs.firstWhere(
-                  (cv) => cv.isDefault == true,
-              orElse: () => vm.myCvs.first
-          );
+          final defaultCv = vm.myCvs.firstWhere((cv) => cv.isDefault == true, orElse: () => vm.myCvs.first);
           setState(() => _selectedCvId = defaultCv.cvId);
         }
       });

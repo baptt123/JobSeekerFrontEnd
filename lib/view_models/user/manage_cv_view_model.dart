@@ -1,22 +1,31 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../models/user-cv-entity.dart';
 import '../../services/cv_service.dart';
+// Import model UserCVEntity nếu bạn đã có, hoặc dùng dynamic tạm thời
+import '../../models/user-cv-entity.dart';
 
 class ManageCvViewModel extends ChangeNotifier {
-  final CvGenerationService _cvService = CvGenerationService();
-  List<UserCvEntity> _cvList = [];
-  bool _isLoading = false;
+  final CVService _cvService = CVService();
 
-  List<UserCvEntity> get cvList => _cvList;
+  List<dynamic> _cvList = []; // Danh sách CV
+  List<dynamic> get cvList => _cvList;
+
+  bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  Future<void> fetchCvs() async {
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  // Lấy danh sách CV
+  Future<void> getMyCVs() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
+
     try {
-      final data = await _cvService.getMyCvs();
-      _cvList = (data as List).map((e) => UserCvEntity.fromJson(e)).toList();
+      _cvList = await _cvService.getMyCVs();
     } catch (e) {
+      _errorMessage = e.toString();
       print("Error fetching CVs: $e");
     } finally {
       _isLoading = false;
@@ -24,25 +33,37 @@ class ManageCvViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteCv(int cvId) async {
+  // Đặt CV làm mặc định
+  Future<bool> setDefaultCv(int cvId) async {
+    _isLoading = true;
+    notifyListeners();
     try {
-      await _cvService.deleteCv(cvId);
-      _cvList.removeWhere((cv) => cv.cvId == cvId);
-      notifyListeners();
+      await _cvService.setDefaultCV(cvId);
+      // Refresh lại list để cập nhật UI icon mặc định
+      await getMyCVs();
+      return true;
     } catch (e) {
-      print("Delete error: $e");
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 
-  Future<void> setDefault(int cvId) async {
+  // Xóa mềm CV
+  Future<bool> deleteCv(int cvId) async {
+    _isLoading = true;
+    notifyListeners();
     try {
-      await _cvService.setDefaultCv(cvId);
-      for (var cv in _cvList) {
-        cv.isDefault = (cv.cvId == cvId);
-      }
-      notifyListeners();
+      await _cvService.deleteCV(cvId);
+      // Xóa thành công thì load lại list
+      await getMyCVs();
+      return true;
     } catch (e) {
-      print("Set default error: $e");
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 }

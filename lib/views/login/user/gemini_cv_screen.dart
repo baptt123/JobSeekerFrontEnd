@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../../../view_models/user/cv_generation_view_model.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import '../../../services/cv_service.dart';
 import 'cv_preview_screen.dart';
 
 class GeminiCvScreen extends StatefulWidget {
@@ -9,56 +10,77 @@ class GeminiCvScreen extends StatefulWidget {
 }
 
 class _GeminiCvScreenState extends State<GeminiCvScreen> {
-  final _promptCtrl = TextEditingController();
+  final TextEditingController _promptController = TextEditingController();
+  final CVService _cvService = CVService();
+  bool _isLoading = false;
 
-  void _generate(BuildContext context) async {
-    if (_promptCtrl.text.isEmpty) return;
+  void _generate() async {
+    String prompt = _promptController.text.trim();
+    if (prompt.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Vui lòng nhập mô tả.")));
+      return;
+    }
 
-    final vm = Provider.of<CvGenerationViewModel>(context, listen: false);
-    final pdfBytes = await vm.generateByGemini(_promptCtrl.text);
+    setState(() => _isLoading = true);
+    try {
+      List<int> pdfBytes = await _cvService.generateCVAI(prompt);
 
-    if (pdfBytes != null) {
-      // Chuyển sang màn hình Preview với dữ liệu bytes
-      Navigator.push(context, MaterialPageRoute(
-          builder: (_) => CvPreviewScreen(fileData: pdfBytes, title: "CV tạo bởi AI")
-      ));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Tạo CV thất bại")));
+      // Lưu file tạm để preview
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/cv_gen_ai.pdf');
+      await file.writeAsBytes(pdfBytes, flush: true);
+
+      showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text("Thành công"),
+            content: Text("CV đã được tạo bởi Gemini!"),
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Đóng dialog
+                    // Chuyển sang màn hình Preview
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => CvPreviewScreen(localPath: file.path)));
+                  },
+                  child: Text("Xem & Tải xuống")
+              )
+            ],
+          )
+      );
+
+    } catch (e) {
+      showDialog(context: context, builder: (_) => AlertDialog(title: Text("Lỗi"), content: Text(e.toString())));
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Đảm bảo có Provider bao bọc hoặc đã khai báo ở main
-    return ChangeNotifierProvider.value(
-      value: Provider.of<CvGenerationViewModel>(context), // Nếu đã khai báo ở main
-      // Hoặc create: (_) => CvGenerationViewModel(), // Nếu chưa khai báo global
-      child: Scaffold(
-        appBar: AppBar(title: Text("Tạo CV với Gemini AI")),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
-                controller: _promptCtrl,
-                decoration: InputDecoration(
-                  labelText: "Nhập mô tả về bản thân (Kinh nghiệm, kỹ năng...)",
+    return Scaffold(
+      appBar: AppBar(title: Text("Tạo CV với Gemini AI")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _promptController,
+              maxLines: 5,
+              decoration: InputDecoration(
                   border: OutlineInputBorder(),
-                ),
-                maxLines: 5,
+                  hintText: "Mô tả bản thân: Tôi là Dev Flutter 2 năm kinh nghiệm, kỹ năng Dart, Git...",
+                  labelText: "Nội dung CV"
               ),
-              SizedBox(height: 20),
-              Consumer<CvGenerationViewModel>(
-                builder: (_, vm, __) => vm.isLoading
-                    ? CircularProgressIndicator()
-                    : ElevatedButton.icon(
-                  onPressed: () => _generate(context),
-                  icon: Icon(Icons.auto_awesome),
-                  label: Text("Tạo CV ngay"),
-                ),
-              )
-            ],
-          ),
+            ),
+            SizedBox(height: 20),
+            _isLoading
+                ? CircularProgressIndicator()
+                : ElevatedButton.icon(
+                onPressed: _generate,
+                icon: Icon(Icons.auto_awesome),
+                label: Text("Tạo CV Ngay")
+            )
+          ],
         ),
       ),
     );

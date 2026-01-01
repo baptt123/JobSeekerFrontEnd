@@ -1,117 +1,224 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
-import '../../../../services/cv_service.dart';
-import 'cv_preview_screen.dart';
+import 'package:provider/provider.dart';
+import 'dart:io';
+import '../../../view_models/user/cv_generation_view_model.dart';
+import 'cv_preview_screen.dart'; // Đảm bảo import đúng
 
 class CvGenerationViewScreen extends StatefulWidget {
-  final int templateId;
-
-  const CvGenerationViewScreen({Key? key, required this.templateId}) : super(key: key);
-
   @override
   _CvGenerationViewScreenState createState() => _CvGenerationViewScreenState();
 }
 
-class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> {
+class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  // Controller cho AI
+  final TextEditingController _aiPromptController = TextEditingController();
+
+  // Controller cho Template
   final _formKey = GlobalKey<FormState>();
-  final CvGenerationService _cvService = CvGenerationService();
-  bool _isLoading = false;
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _skillController = TextEditingController();
+  final _expController = TextEditingController();
+  int _selectedTemplateId = 1;
 
-  // Các controller quản lý input
-  final TextEditingController _nameCtrl = TextEditingController();
-  final TextEditingController _emailCtrl = TextEditingController();
-  final TextEditingController _phoneCtrl = TextEditingController();
-  final TextEditingController _skillCtrl = TextEditingController();
-  final TextEditingController _expCtrl = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
-  Future<void> _submitAndGenerate() async {
-    if (!_formKey.currentState!.validate()) return;
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _aiPromptController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _skillController.dispose();
+    _expController.dispose();
+    super.dispose();
+  }
 
-    setState(() => _isLoading = true);
-
-    // Map dữ liệu gửi xuống Backend
-    final data = {
-      'fullName': _nameCtrl.text,
-      'email': _emailCtrl.text,
-      'phone': _phoneCtrl.text,
-      'skills': _skillCtrl.text,
-      'experience': _expCtrl.text,
-      // Backend sẽ tự lấy avatarUrl từ User Profile nếu không truyền lên
-    };
-
-    try {
-      // 1. Gọi API tạo CV theo Template
-      final List<int> pdfBytes = await _cvService.generateCvTemplate(widget.templateId, data);
-
-      // 2. Chuyển sang màn hình xem trước
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CvPreviewScreen(
-              fileData: Uint8List.fromList(pdfBytes),
-              title: "Kết quả tạo CV",
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      _showError("Tạo CV thất bại: $e");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  // Xử lý tạo AI
+  void _handleGenerateAI(CvGenerationViewModel viewModel) async {
+    File? pdfFile = await viewModel.generateCvByAi(_aiPromptController.text.trim());
+    if (pdfFile != null) {
+      _navigateToPreview(pdfFile.path);
+    } else if (viewModel.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(viewModel.errorMessage!)));
     }
   }
 
-  void _showError(String msg) {
-    showDialog(context: context, builder: (_) => AlertDialog(title: Text("Lỗi"), content: Text(msg)));
+  // Xử lý tạo Template
+  void _handleGenerateTemplate(CvGenerationViewModel viewModel) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Chuẩn bị data
+    Map<String, dynamic> data = {
+      "fullName": _nameController.text,
+      "email": _emailController.text,
+      "phone": _phoneController.text,
+      // Chuyển chuỗi skill thành mảng object
+      "skills": _skillController.text.split(',').map((e) => {"name": e.trim()}).toList(),
+      "experiences": [{
+        "jobTitle": "Kinh nghiệm làm việc",
+        "company": "",
+        "description": _expController.text,
+        "duration": ""
+      }]
+    };
+
+    File? pdfFile = await viewModel.generateCvFromTemplate(_selectedTemplateId, data);
+    if (pdfFile != null) {
+      _navigateToPreview(pdfFile.path);
+    } else if (viewModel.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(viewModel.errorMessage!)));
+    }
+  }
+
+  void _navigateToPreview(String path) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CvPreviewScreen(localPath: path)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Nhập thông tin CV")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(labelText: "Họ và tên"),
-                validator: (v) => v!.isEmpty ? "Không được để trống" : null,
-              ),
-              TextFormField(
-                controller: _emailCtrl,
-                decoration: InputDecoration(labelText: "Email"),
-                validator: (v) => v!.isEmpty ? "Không được để trống" : null,
-              ),
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: InputDecoration(labelText: "Số điện thoại"),
-              ),
-              TextFormField(
-                controller: _skillCtrl,
-                decoration: InputDecoration(labelText: "Kỹ năng (cách nhau dấu phẩy)"),
-                maxLines: 2,
-              ),
-              TextFormField(
-                controller: _expCtrl,
-                decoration: InputDecoration(labelText: "Kinh nghiệm làm việc"),
-                maxLines: 4,
-              ),
-              SizedBox(height: 20),
-              _isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                onPressed: _submitAndGenerate,
-                child: Text("Tạo CV ngay"),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                ),
-              ),
+    return ChangeNotifierProvider(
+      create: (_) => CvGenerationViewModel(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text("Tạo CV Mới"),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              Tab(text: "Gemini AI", icon: Icon(Icons.auto_awesome)),
+              Tab(text: "Template", icon: Icon(Icons.art_track)),
             ],
           ),
+        ),
+        body: Consumer<CvGenerationViewModel>(
+          builder: (context, viewModel, child) {
+            if (viewModel.isLoading) {
+              return Center(child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 10),
+                  Text("Đang xử lý, vui lòng chờ...")
+                ],
+              ));
+            }
+
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                // TAB 1: AI GEMINI
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Nhập mô tả về bản thân, kinh nghiệm, kỹ năng. AI sẽ tự động thiết kế CV cho bạn.",
+                        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
+                      ),
+                      SizedBox(height: 10),
+                      TextField(
+                        controller: _aiPromptController,
+                        maxLines: 8,
+                        decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            hintText: "Ví dụ: Tôi là Nguyễn Văn A, lập trình viên Flutter 3 năm kinh nghiệm. Kỹ năng: Dart, Firebase, Git. Đã từng làm dự án E-commerce...",
+                            labelText: "Mô tả CV mong muốn"
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => _handleGenerateAI(viewModel),
+                        icon: Icon(Icons.create),
+                        label: Text("Tạo CV với AI"),
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // TAB 2: TEMPLATE
+                SingleChildScrollView(
+                  padding: EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        Text("Chọn mẫu và điền thông tin"),
+                        SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ChoiceChip(
+                              label: Text("Mẫu Cơ Bản"),
+                              selected: _selectedTemplateId == 1,
+                              onSelected: (v) => setState(() => _selectedTemplateId = 1),
+                            ),
+                            SizedBox(width: 10),
+                            ChoiceChip(
+                              label: Text("Mẫu Hiện Đại"),
+                              selected: _selectedTemplateId == 2,
+                              onSelected: (v) => setState(() => _selectedTemplateId = 2),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 15),
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: InputDecoration(labelText: "Họ và tên", border: OutlineInputBorder()),
+                          validator: (v) => v!.isEmpty ? "Không được để trống" : null,
+                        ),
+                        SizedBox(height: 10),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: InputDecoration(labelText: "Email", border: OutlineInputBorder()),
+                          validator: (v) => v!.isEmpty ? "Không được để trống" : null,
+                        ),
+                        SizedBox(height: 10),
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: InputDecoration(labelText: "Số điện thoại", border: OutlineInputBorder()),
+                          validator: (v) => v!.isEmpty ? "Không được để trống" : null,
+                        ),
+                        SizedBox(height: 10),
+                        TextFormField(
+                          controller: _skillController,
+                          decoration: InputDecoration(labelText: "Kỹ năng (cách nhau dấu phẩy)", border: OutlineInputBorder()),
+                        ),
+                        SizedBox(height: 10),
+                        TextFormField(
+                          controller: _expController,
+                          maxLines: 3,
+                          decoration: InputDecoration(labelText: "Kinh nghiệm làm việc", border: OutlineInputBorder()),
+                        ),
+                        SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => _handleGenerateTemplate(viewModel),
+                          icon: Icon(Icons.save),
+                          label: Text("Tạo từ Template"),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

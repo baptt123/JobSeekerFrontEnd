@@ -16,15 +16,16 @@ class CommentSection extends StatefulWidget {
 
 class _CommentSectionState extends State<CommentSection> {
   final TextEditingController _ctrl = TextEditingController();
-  bool _isSending = false; // Trạng thái local để disable nút gửi khi đang call API
+  bool _isSending = false;
 
   @override
   void initState() {
     super.initState();
+    // Logic fetch đã được gọi ở JobDetailViewModel.fetchJobDetail
+    // Nhưng để chắc chắn, nếu list rỗng thì gọi load lại
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = Provider.of<JobDetailViewModel>(context, listen: false);
-      vm.checkLoginStatus();
-      if (vm.comments.isEmpty) {
+      if (vm.comments.isEmpty && !vm.isLoadingComments) {
         vm.loadComments(widget.jobId);
       }
     });
@@ -38,6 +39,7 @@ class _CommentSectionState extends State<CommentSection> {
 
   @override
   Widget build(BuildContext context) {
+    // Lấy ViewModel từ Provider
     final vm = Provider.of<JobDetailViewModel>(context);
 
     return Column(
@@ -51,7 +53,7 @@ class _CommentSectionState extends State<CommentSection> {
               Icon(Icons.forum_outlined, color: kPrimaryColor),
               SizedBox(width: 8),
               Text(
-                "Hỏi đáp & Bình luận (Ẩn danh)",
+                "Hỏi đáp & Bình luận",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
@@ -71,7 +73,7 @@ class _CommentSectionState extends State<CommentSection> {
           ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(), // Để scroll theo parent widget
             itemCount: vm.comments.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (ctx, index) {
@@ -101,7 +103,7 @@ class _CommentSectionState extends State<CommentSection> {
 
         const SizedBox(height: 20),
 
-        // 2. Khu vực nhập liệu
+        // 2. Input nhập liệu
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: vm.isLoggedIn
@@ -136,17 +138,14 @@ class _CommentSectionState extends State<CommentSection> {
                       : () async {
                     final text = _ctrl.text.trim();
                     if (text.isNotEmpty) {
-                      setState(() => _isSending = true); // Hiện loading
+                      setState(() => _isSending = true);
+                      FocusScope.of(context).unfocus(); // Ẩn bàn phím
 
-                      // ✅ Gọi hàm và đợi kết quả bool
                       bool success = await vm.sendComment(context, text);
 
                       if (mounted) {
-                        setState(() => _isSending = false); // Tắt loading
-                        if (success) {
-                          _ctrl.clear(); // Chỉ xóa text nếu thành công
-                          FocusScope.of(context).unfocus();
-                        }
+                        setState(() => _isSending = false);
+                        if (success) _ctrl.clear();
                       }
                     }
                   },
@@ -168,7 +167,7 @@ class _CommentSectionState extends State<CommentSection> {
                   style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, foregroundColor: Colors.white),
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())).then((_) {
-                      vm.checkLoginStatus();
+                      vm.checkLoginStatus(); // Check lại sau khi quay về
                     });
                   },
                 ),

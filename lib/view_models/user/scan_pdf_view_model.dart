@@ -1,55 +1,63 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/cv_service.dart';
 
 class ScanPdfViewModel extends ChangeNotifier {
-  final CvGenerationService _cvService = CvGenerationService();
+  final CVService _cvService = CVService();
 
   bool _isLoading = false;
-  String? _keywords;
-  String? _error;
-
   bool get isLoading => _isLoading;
-  String? get keywords => _keywords;
-  String? get error => _error;
 
-  Future<void> pickAndUploadPdf() async {
-    _error = null;
-    _keywords = null;
+  String? _extractedKeywords;
+  String? get extractedKeywords => _extractedKeywords;
 
-    // Check định dạng file PDF
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  // Hàm chọn file và upload
+  Future<bool> pickAndUploadCv() async {
+    _errorMessage = null;
+    _extractedKeywords = null;
+
+    // 1. Chọn file
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
     );
 
-    if (result != null) {
-      PlatformFile file = result.files.first;
-      if (file.extension != 'pdf') {
-        _error = "Vui lòng chọn file đúng định dạng .pdf";
-        notifyListeners();
-        return;
-      }
+    if (result == null) return false; // Người dùng hủy chọn
 
-      _isLoading = true;
+    File file = File(result.files.single.path!);
+
+    // Validation Frontend
+    if (!file.path.toLowerCase().endsWith('.pdf')) {
+      _errorMessage = "Vui lòng chỉ chọn file định dạng PDF.";
       notifyListeners();
-
-      try {
-        // Gọi Service gửi xuống Backend
-        final res = await _cvService.uploadCv(file);
-        _keywords = res['keywords'];
-      } catch (e) {
-        _error = "Lỗi upload: $e";
-      } finally {
-        _isLoading = false;
-        notifyListeners();
-      }
+      return false;
     }
-  }
 
-  void clearState() {
-    _error = null;
-    _keywords = null;
+    // 2. Upload
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      // API trả về json { message, cv, keywords }
+      final response = await _cvService.uploadCV(file);
+
+      if (response != null && response['keywords'] != null) {
+        _extractedKeywords = response['keywords'];
+      } else {
+        _extractedKeywords = "Không xác định";
+      }
+
+      return true; // Thành công
+    } catch (e) {
+      _errorMessage = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

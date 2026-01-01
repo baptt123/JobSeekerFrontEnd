@@ -1,69 +1,84 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:http_parser/http_parser.dart';
 import '../utils/constant_api.dart';
 import '../utils/dio_client.dart';
 
-class CvGenerationService {
+class CVService {
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}');
-
-  // 1. Upload & Rút trích Keyword (Backend dùng Gemini File Search)
-  Future<Map<String, dynamic>> uploadCv(PlatformFile file) async {
+  // 1. Upload CV
+  Future<dynamic> uploadCV(File file) async {
+    String fileName = file.path.split('/').last;
     FormData formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(file.path!, filename: file.name),
+      "file": await MultipartFile.fromFile(
+        file.path,
+        filename: fileName,
+        contentType: MediaType('application', 'pdf'),
+      ),
     });
+
     try {
-      final response = await _dio.post('/cv/upload-extract', data: formData);
-      return response.data; // Trả về { cv: object, keywords: string }
-    } catch (e) {
-      throw e;
+      Response response = await _dio.post(
+        '/cv/upload-extract',
+        data: formData,
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Lỗi tải lên CV');
     }
   }
 
-  // 2. Tạo CV bằng Gemini (Nhận về file PDF bytes)
-  Future<List<int>> generateCvGemini(String prompt) async {
+  // 2. Generate AI (Nhận về Bytes PDF)
+  Future<List<int>> generateCVAI(String prompt) async {
     try {
-      final response = await _dio.post(
+      Response response = await _dio.post(
         '/cv/generate-ai',
-        data: {'prompt': prompt},
+        data: {"prompt": prompt},
         options: Options(responseType: ResponseType.bytes),
       );
       return response.data;
-    } catch (e) {
-      throw e;
+    } on DioException catch (e) {
+      throw Exception('Lỗi tạo CV AI: ${e.message}');
     }
   }
 
-  // 3. Tạo CV từ Template
-  Future<List<int>> generateCvTemplate(int templateId, Map<String, dynamic> data) async {
+  // 3. Generate Template (Nhận về Bytes PDF)
+  Future<List<int>> generateCVTemplate(int templateId, Map<String, dynamic> data) async {
     try {
-      final response = await _dio.post(
+      Response response = await _dio.post(
         '/cv/generate-template',
-        data: {'templateId': templateId, 'data': data},
+        data: {"templateId": templateId, "data": data},
         options: Options(responseType: ResponseType.bytes),
       );
       return response.data;
-    } catch (e) {
-      throw e;
+    } on DioException catch (e) {
+      throw Exception('Lỗi tạo CV từ Template: ${e.message}');
     }
   }
 
-  // 4. Lấy danh sách CV
-  Future<List<dynamic>> getMyCvs() async {
+  // 4. Quản lý CV
+  Future<List<dynamic>> getMyCVs() async {
     try {
-      final response = await _dio.get('/cv/list');
+      Response response = await _dio.get('/cv/list');
       return response.data;
     } catch (e) {
-      throw e;
+      throw Exception('Lỗi lấy danh sách CV');
     }
   }
 
-  // Xoá mềm CV
-  Future<void> deleteCv(int id) async {
-    await _dio.delete('/cv/delete/$id');
+  Future<void> setDefaultCV(int id) async {
+    try {
+      await _dio.patch('/cv/set-default/$id');
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Lỗi đặt mặc định');
+    }
   }
 
-  // Đặt mặc định
-  Future<void> setDefaultCv(int id) async {
-    await _dio.patch('/cv/set-default/$id');
+  Future<void> deleteCV(int id) async {
+    try {
+      await _dio.delete('/cv/delete/$id');
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Lỗi xóa CV');
+    }
   }
 }
