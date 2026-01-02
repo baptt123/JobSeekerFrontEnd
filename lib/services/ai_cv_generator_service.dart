@@ -4,7 +4,7 @@ import '../dto/create_cv_dto.dart';
 import '../dto/education_dto.dart';
 import '../dto/experience_dto.dart';
 import '../dto/skill_dto.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AiCvGeneratorService {
   // Singleton pattern
   static final AiCvGeneratorService _instance = AiCvGeneratorService._internal();
@@ -13,7 +13,7 @@ class AiCvGeneratorService {
 
   // ĐIỀN API KEY CỦA BẠN VÀO ĐÂY
   // Lưu ý: Khi release app thật thì nên giấu key này hoặc dùng backend proxy
-  static const String _apiKey = 'AIzaSyCNntEE3URoBO69DoInkRDvbi31blaC01M';
+  static final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
   late final GenerativeModel _model;
 
