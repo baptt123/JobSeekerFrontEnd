@@ -6,7 +6,8 @@ import '../utils/dio_client.dart';
 
 class CVService {
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}');
-  // 1. Upload CV
+
+  // 1. Upload CV (Giữ nguyên)
   Future<dynamic> uploadCV(File file) async {
     String fileName = file.path.split('/').last;
     FormData formData = FormData.fromMap({
@@ -28,21 +29,28 @@ class CVService {
     }
   }
 
-  // 2. Generate AI (Nhận về Bytes PDF)
+  // 2. Generate AI (UPDATED: Nhận Bytes PDF)
   Future<List<int>> generateCVAI(String prompt) async {
     try {
       Response response = await _dio.post(
         '/cv/generate-ai',
         data: {"prompt": prompt},
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes, // Quan trọng: Nhận dữ liệu nhị phân
+          receiveTimeout: Duration(seconds: 90), // Tăng timeout cho tác vụ AI
+        ),
       );
       return response.data;
     } on DioException catch (e) {
-      throw Exception('Lỗi tạo CV AI: ${e.message}');
+      // Nếu Backend trả về lỗi JSON thay vì file
+      if (e.response != null && e.response?.headers.value('content-type')?.contains('json') == true) {
+        // Thử parse lỗi từ buffer nếu cần, nhưng thường Dio sẽ throw ở đây
+      }
+      throw Exception('Không thể tạo CV lúc này. Vui lòng thử lại sau.');
     }
   }
 
-  // 3. Generate Template (Nhận về Bytes PDF)
+  // 3. Generate Template (Giữ nguyên)
   Future<List<int>> generateCVTemplate(int templateId, Map<String, dynamic> data) async {
     try {
       Response response = await _dio.post(
@@ -56,7 +64,7 @@ class CVService {
     }
   }
 
-  // 4. Quản lý CV
+  // 4. Quản lý CV (Giữ nguyên)
   Future<List<dynamic>> getMyCVs() async {
     try {
       Response response = await _dio.get('/cv/list');

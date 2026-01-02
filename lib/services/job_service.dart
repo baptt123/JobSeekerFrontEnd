@@ -69,4 +69,18 @@ class JobService {
       throw Exception('Lỗi lấy thông tin công ty: $e');
     }
   }
+  // [THÊM MỚI] Lấy danh sách random jobs cho banner
+  Future<List<JobEntity>> getRandomJobs() async {
+    try {
+      final response = await _dio.get('/random');
+      final data = response.data['data'];
+      if (data is List) {
+        return data.map((json) => JobEntity.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Lỗi khi lấy các job ngẫu nhiên: $e');
+      return []; // Trả về list rỗng nếu lỗi
+    }
+  }
 }

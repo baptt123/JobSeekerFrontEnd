@@ -73,7 +73,7 @@ class LocalNotificationService {
 
   /// Xử lý khi nhấn thông báo
   static void _onDidReceiveNotificationResponse(NotificationResponse response) {
-    print('Notification tapped: ${response.payload}');
+    print('Nhấn nào notification: ${response.payload}');
     // TODO: Điều hướng dựa trên response.payload
   }
 }

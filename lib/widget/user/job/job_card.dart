@@ -50,7 +50,10 @@ class JobCard extends StatelessWidget {
               child: Image.network(
                 logoUrl,
                 fit: BoxFit.contain,
-                errorBuilder: (ctx, err, stack) => _buildFallbackIcon(),
+                // [YÊU CẦU 2] Hiển thị logo sẵn có (Icon) nếu lỗi ảnh
+                errorBuilder: (ctx, err, stack) => const Center(
+                  child: Icon(Icons.business, color: Colors.grey, size: 28),
+                ),
               ),
             )
                 : _buildFallbackIcon(job.company?.name),
@@ -106,16 +109,6 @@ class JobCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // --- BOOKMARK ICON ---
-          // Nếu bạn muốn thêm nút lưu ở đây thì uncomment
-          /*
-          Icon(
-            job.isSaved ? Icons.bookmark : Icons.bookmark_border,
-            color: job.isSaved ? const Color(0xFF6C63FF) : Colors.grey[400],
-            size: 22,
-          ),
-          */
         ],
       ),
     );
@@ -135,6 +128,7 @@ class JobCard extends StatelessWidget {
         ),
       );
     }
+    // Logo mặc định nếu không có tên
     return const Icon(Icons.business, color: Colors.grey);
   }
 

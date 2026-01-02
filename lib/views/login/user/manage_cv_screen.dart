@@ -99,7 +99,7 @@ class _ManageCvScreenState extends State<ManageCvScreen> {
   // Helper View
   void _viewCV(String url) {
     // Nếu là URL online, truyền vào PDF Viewer (cần xử lý download file về temp để view nếu lib yêu cầu file local)
-    Navigator.push(context, MaterialPageRoute(builder: (_) => CvPreviewScreen(fileUrl: url)));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => CvPreviewScreen(localPath: url,)));
   }
 
   void _showDialog(String title, String content) {

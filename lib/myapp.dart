@@ -107,7 +107,7 @@ class MyApp extends StatelessWidget {
             '/notification': (_) => const NotificationScreen(),
             '/profile': (_) => const ProfileScreen(),
             '/manage_cv': (_) => ManageCvScreen(),
-            '/cv_preview': (_) => const CvPreviewScreen(),
+            '/cv_preview': (_) =>  CvPreviewScreen(localPath: '',),
           },
         );
       },

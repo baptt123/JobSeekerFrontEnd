@@ -1,6 +1,7 @@
 // lib/views/login/user/main_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/views/login/user/ai_cv_creation_screen.dart';
 import 'package:provider/provider.dart';
 
 // Import ViewModels
@@ -8,7 +9,6 @@ import 'package:job_seeker_frontend/view_models/user/save_job_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/notification_view_model.dart';
 
 // Import Screens
-import 'package:job_seeker_frontend/views/login/user/conversation_list_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
@@ -29,8 +29,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const SavedJobsScreen(),
-    CvTemplateSelectionScreen(),
-    const ConversationListScreen(),
+    const AiCvCreationScreen(),
     const ProfileScreen(),
   ];
 
@@ -57,14 +56,13 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // Lắng nghe số lượng tin chưa đọc từ NotificationViewModel
     // (Bạn có thể thay bằng MessageViewModel nếu có logic chat riêng)
-    final unreadCount = context.select<NotificationViewModel, int>((vm) => vm.unreadCount);
+    final unreadCount = context.select<NotificationViewModel, int>(
+      (vm) => vm.unreadCount,
+    );
 
     return Scaffold(
       // Dùng IndexedStack để giữ trạng thái các trang khi chuyển tab
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: HomeBottomNav(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,

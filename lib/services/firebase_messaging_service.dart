@@ -9,7 +9,6 @@ import 'package:job_seeker_frontend/services/local_notification_service.dart';
 import 'package:job_seeker_frontend/services/user_service.dart';
 import 'package:job_seeker_frontend/utils/global_keys.dart';
 import 'package:job_seeker_frontend/views/login/user/job_detail_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/message_screen.dart';
 
 class FirebaseMessagingService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -128,13 +127,6 @@ class FirebaseMessagingService {
     if (type == 'CHAT_MSG' || data['click_action'] == 'CHAT_DETAIL') {
       final otherUserIdStr = data['senderId'] ?? data['other_user_id'];
       if (otherUserIdStr != null) {
-        navigator.push(MaterialPageRoute(
-          builder: (context) => MessageScreen(
-            otherUserId: int.parse(otherUserIdStr.toString()),
-            otherUserName: data['senderName'] ?? 'Nhà tuyển dụng',
-            otherUserAvatar: data['senderAvatar'] ?? '',
-          ),
-        ));
       }
     } else if (type == 'NEW_JOB_POST' || type == 'APPLICATION_UPDATE') {
       if (data['job_title'] != null) {

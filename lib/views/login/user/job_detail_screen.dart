@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
-import 'message_screen.dart';
 import 'company_detail_screen.dart';
 import '../../../widget/user/job/comment_section.dart';
 
@@ -247,7 +246,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
       child: SafeArea(
         child: Row(
           children: [
-            Expanded(child: OutlinedButton.icon(onPressed: () { final recruiter = job.recruiter; if (recruiter == null || recruiter.id == 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Thông tin người tuyển dụng không khả dụng."))); return; } Navigator.push(context, MaterialPageRoute(builder: (context) => MessageScreen(otherUserId: recruiter.id, otherUserName: recruiter.fullName, otherUserAvatar: recruiter.avatarUrl ?? ""))); }, icon: const Icon(Icons.chat_bubble_outline), label: const Text("Chat ngay", style: TextStyle(fontWeight: FontWeight.bold)), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: kPrimaryColor), foregroundColor: kPrimaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
+            // Expanded(child: OutlinedButton.icon(onPressed: () { final recruiter = job.recruiter; if (recruiter == null || recruiter.id == 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Thông tin người tuyển dụng không khả dụng."))); return; } Navigator.push(context, MaterialPageRoute(builder: (context) => MessageScreen(otherUserId: recruiter.id, otherUserName: recruiter.fullName, otherUserAvatar: recruiter.avatarUrl ?? ""))); }, icon: const Icon(Icons.chat_bubble_outline), label: const Text("Chat ngay", style: TextStyle(fontWeight: FontWeight.bold)), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: kPrimaryColor), foregroundColor: kPrimaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
             const SizedBox(width: 16),
             Expanded(child: ElevatedButton(onPressed: vm.isApplied ? null : () => _showApplyBottomSheet(context, vm), style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, disabledBackgroundColor: Colors.grey[300], padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text(vm.isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay", style: TextStyle(color: vm.isApplied ? Colors.grey : Colors.white, fontWeight: FontWeight.bold)))),
           ],

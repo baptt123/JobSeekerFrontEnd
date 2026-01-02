@@ -17,6 +17,10 @@ class HomeViewModel extends ChangeNotifier {
   List<JobEntity> _jobs = [];
   List<JobEntity> get jobs => _jobs;
 
+  // [QUAN TRỌNG] List chứa các job ngẫu nhiên cho banner
+  List<JobEntity> _randomJobs = [];
+  List<JobEntity> get randomJobs => _randomJobs;
+
   HomeState _state = HomeState.idle;
   HomeState get state => _state;
 
@@ -46,9 +50,7 @@ class HomeViewModel extends ChangeNotifier {
     fetchInitialData();
   }
 
-  // ✅ Hàm làm mới dữ liệu khi người dùng kéo màn hình xuống
   Future<void> refreshJobs() async {
-    // Gọi lại hàm fetchInitialData để cập nhật User Profile, Saved Jobs và Job List mới nhất
     await fetchInitialData();
   }
 
@@ -60,6 +62,9 @@ class HomeViewModel extends ChangeNotifier {
     _currentFilter = FilterJobDto();
     _currentUser = null;
     notifyListeners();
+
+    // [QUAN TRỌNG] Gọi hàm lấy random job ngay khi khởi tạo
+    await _fetchRandomJobs();
 
     try {
       final token = await _storage.read(key: 'accessToken');
@@ -95,6 +100,18 @@ class HomeViewModel extends ChangeNotifier {
       _errorMessage = "Không thể kết nối đến máy chủ.";
     } finally {
       notifyListeners();
+    }
+  }
+
+  // Hàm lấy random jobs
+  Future<void> _fetchRandomJobs() async {
+    try {
+      final jobs = await _jobService.getRandomJobs();
+      _randomJobs = jobs;
+      notifyListeners();
+    } catch (e) {
+      print('Lỗi tải banner random: $e');
+      // Không throw lỗi để app vẫn chạy tiếp
     }
   }
 

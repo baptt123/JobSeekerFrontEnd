@@ -6,9 +6,12 @@ import '../../../view_models/user/home_view_model.dart';
 import '../../../view_models/user/save_job_view_model.dart';
 import '../../../view_models/user/user_profile_view_model.dart';
 import '../../../widget/user/home/home_header.dart';
+import '../../../models/job-entity.dart';
 import 'filter_screen.dart';
 import 'search_screen.dart';
 import 'job_detail_screen.dart';
+
+// [LƯU Ý]: File này không chứa BottomNavigationBar (MainScreen sẽ quản lý)
 
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
@@ -26,8 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _bannerTimer;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final int _totalBanners = 5;
-
   @override
   void initState() {
     super.initState();
@@ -41,15 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<HomeViewModel>().loadMoreJobs();
       }
     });
-
-    _startBannerTimer();
   }
 
-  void _startBannerTimer() {
+  void _startBannerTimer(int totalBanners) {
+    _bannerTimer?.cancel();
+    if (totalBanners <= 1) return;
+
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_bannerController.hasClients) {
         int nextPage = _currentBannerIndex + 1;
-        if (nextPage >= _totalBanners) nextPage = 0;
+        if (nextPage >= totalBanners) nextPage = 0;
         _bannerController.animateToPage(
             nextPage,
             duration: const Duration(milliseconds: 800),
@@ -73,52 +75,41 @@ class _HomeScreenState extends State<HomeScreen> {
     final profileVM = context.watch<ProfileViewModel>();
     final currentUser = profileVM.user ?? homeVM.currentUser;
 
+    // Start timer nếu có dữ liệu randomJobs
+    if (homeVM.randomJobs.isNotEmpty && (_bannerTimer == null || !_bannerTimer!.isActive)) {
+      _startBannerTimer(homeVM.randomJobs.length);
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFF9F9F9),
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "TechConnect",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: () => _showFilterScreen(context),
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(context, currentUser),
-      body: Stack(
-        children: [
-          // ✅ Đã bọc nội dung bằng RefreshIndicator để kéo làm mới
-          RefreshIndicator(
-            onRefresh: () => homeVM.refreshJobs(), // Gọi hàm làm mới từ ViewModel
-            color: kPrimaryColor,
-            backgroundColor: Colors.white,
-            edgeOffset: 100, // Đẩy vòng xoay xuống dưới AppBar
-            child: _buildBody(context, homeVM, currentUser),
-          ),
 
-          if (homeVM.state == HomeState.loading && homeVM.jobs.isEmpty)
-            Container(
-              color: Colors.black.withOpacity(0.1),
-              child: const Center(child: CircularProgressIndicator(color: kPrimaryColor)),
+      // Không dùng AppBar hay BottomNavigationBar tại đây
+      drawer: _buildDrawer(context, currentUser),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: () => homeVM.refreshJobs(),
+              color: kPrimaryColor,
+              backgroundColor: Colors.white,
+              edgeOffset: 0,
+              child: _buildBody(context, homeVM, currentUser),
             ),
-        ],
+
+            if (homeVM.state == HomeState.loading && homeVM.jobs.isEmpty)
+              Container(
+                color: Colors.black.withOpacity(0.1),
+                child: const Center(child: CircularProgressIndicator(color: kPrimaryColor)),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBody(BuildContext context, HomeViewModel vm, dynamic user) {
+    // Nếu có lỗi và không có job nào
     if (vm.state == HomeState.error && vm.jobs.isEmpty) {
       return Center(
         child: Column(
@@ -139,11 +130,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return SingleChildScrollView(
       controller: _scrollController,
-      // ✅ Thay đổi Physics để luôn có thể kéo (ngay cả khi danh sách ngắn)
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Navbar tùy chỉnh (Menu, Title, Filter)
+          _buildCustomNavBar(),
+
+          // 2. Header thông tin user + Thanh tìm kiếm
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -159,9 +153,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 30),
-          _buildBannerSection(),
-          const SizedBox(height: 24),
+
+          const SizedBox(height: 30), // Khoảng cách
+
+          // 3. [VỊ TRÍ BẠN YÊU CẦU] Banner Random Jobs
+          // Nó nằm ngay dưới thanh search và trên Text tiêu đề bên dưới
+          _buildDynamicBannerSection(vm.randomJobs),
+
+          const SizedBox(height: 24), // Khoảng cách
+
+          // 4. Tiêu đề "Việc làm mới nhất" / "Gợi ý"
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
@@ -182,7 +183,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+
           const SizedBox(height: 16),
+
+          // 5. Danh sách Jobs
           if (vm.jobs.isEmpty && vm.state == HomeState.success)
             const Padding(
                 padding: EdgeInsets.all(40.0),
@@ -206,10 +210,144 @@ class _HomeScreenState extends State<HomeScreen> {
                 return _buildJobItem(context, vm, index);
               },
             ),
+
           if (vm.state == HomeState.loadingMore)
             const Padding(padding: EdgeInsets.all(20.0), child: Center(child: CircularProgressIndicator(color: kPrimaryColor))),
-          const SizedBox(height: 80),
+
+          const SizedBox(height: 80), // Padding bottom để không bị che bởi BottomNav
         ],
+      ),
+    );
+  }
+
+  // --- WIDGET CON ---
+
+  Widget _buildCustomNavBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.menu, color: kPrimaryColor, size: 28),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+          const Text(
+            "TechConnect",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kPrimaryColor),
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list, color: kPrimaryColor, size: 28),
+            onPressed: () => _showFilterScreen(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget hiển thị Banner
+  Widget _buildDynamicBannerSection(List<JobEntity> jobs) {
+    // Nếu không có job nào (list rỗng), widget này sẽ ẩn đi
+    // => Đây là lý do bạn không thấy nó nếu backend chưa trả về dữ liệu
+    if (jobs.isEmpty) return const SizedBox.shrink();
+
+    return SizedBox(
+      height: 180,
+      child: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _bannerController,
+              onPageChanged: (index) => setState(() => _currentBannerIndex = index),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) {
+                return _buildJobBannerItem(jobs[index]);
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Dots indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(jobs.length, (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: _currentBannerIndex == index ? 24 : 8,
+              height: 8,
+              decoration: BoxDecoration(color: _currentBannerIndex == index ? kPrimaryColor : Colors.grey[300], borderRadius: BorderRadius.circular(4)),
+            )),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJobBannerItem(JobEntity job) {
+    final List<List<Color>> gradients = [
+      [const Color(0xFF6C63FF), const Color(0xFF8B5CF6)],
+      [const Color(0xFFFA709A), const Color(0xFFFEE140)],
+      [const Color(0xFF00C6FB), const Color(0xFF005BEA)],
+      [const Color(0xFF11998e), const Color(0xFF38ef7d)],
+      [const Color(0xFFFF416C), const Color(0xFFFF4B2B)],
+    ];
+    // Chọn màu ngẫu nhiên dựa trên ID job để cố định màu cho mỗi job
+    final gradient = gradients[(job.jobId) % gradients.length];
+
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => JobDetailScreen(jobTitle: job.title))),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                boxShadow: [BoxShadow(color: gradient.last.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 5))]
+            ),
+            child: Stack(
+              children: [
+                // Background decoration
+                Positioned(top: -20, right: -20, child: Container(width: 100, height: 100, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle))),
+                Positioned(bottom: -40, left: -10, child: Container(width: 140, height: 140, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle))),
+
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Text("HOT JOB", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+                            const SizedBox(height: 8),
+                            Text(job.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Text(job.company?.name ?? "Công ty nổi bật", style: const TextStyle(color: Colors.white70, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      // Logo
+                      Container(
+                        width: 50, height: 50,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                        child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              job.company?.logoUrl ?? '',
+                              fit: BoxFit.contain,
+                              errorBuilder: (ctx, error, stack) => const Icon(Icons.business, color: kPrimaryColor),
+                            )
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -248,7 +386,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade100)),
                   padding: const EdgeInsets.all(4),
                   child: hasValidLogo
-                      ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(logoUrl, fit: BoxFit.contain))
+                      ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        logoUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.business_outlined, color: Colors.grey)),
+                      )
+                  )
                       : Center(child: Text(job.company?.name?[0] ?? "C", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: kPrimaryColor))),
                 ),
                 const SizedBox(width: 14),
@@ -379,79 +524,6 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15.0), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]),
       child: Row(children: [const Icon(Icons.search, color: kPrimaryColor), const SizedBox(width: 12), const Expanded(child: Text('Tìm kiếm việc làm, công ty...', style: TextStyle(color: Colors.grey, fontSize: 14), overflow: TextOverflow.ellipsis))]),
-    );
-  }
-
-  Widget _buildBannerSection() {
-    return SizedBox(
-      height: 180,
-      child: Column(
-        children: [
-          Expanded(
-            child: PageView(
-              controller: _bannerController,
-              onPageChanged: (index) => setState(() => _currentBannerIndex = index),
-              children: [
-                _buildFancyBannerItem([const Color(0xFF6C63FF), const Color(0xFF8B5CF6)], "Tuyển dụng IT", "Lương lên đến \$2000", Icons.code),
-                _buildFancyBannerItem([const Color(0xFFFA709A), const Color(0xFFFEE140)], "Marketing 4.0", "Môi trường năng động", Icons.campaign),
-                _buildFancyBannerItem([const Color(0xFF00C6FB), const Color(0xFF005BEA)], "Thiết kế UI/UX", "Sáng tạo không giới hạn", Icons.brush),
-                _buildFancyBannerItem([const Color(0xFF11998e), const Color(0xFF38ef7d)], "Data Scientist", "Khai phá dữ liệu lớn", Icons.analytics),
-                _buildFancyBannerItem([const Color(0xFFFF416C), const Color(0xFFFF4B2B)], "Quản trị nhân sự", "Xây dựng đội ngũ", Icons.people_alt),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_totalBanners, (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: _currentBannerIndex == index ? 24 : 8,
-              height: 8,
-              decoration: BoxDecoration(color: _currentBannerIndex == index ? kPrimaryColor : Colors.grey[300], borderRadius: BorderRadius.circular(4)),
-            )),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFancyBannerItem(List<Color> colors, String title, String subtitle, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          decoration: BoxDecoration(gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: colors.last.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 5))]),
-          child: Stack(
-            children: [
-              Positioned(top: -20, right: -20, child: Container(width: 100, height: 100, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle))),
-              Positioned(bottom: -40, left: -10, child: Container(width: 140, height: 140, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle))),
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Text("HOT JOB", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                          const SizedBox(height: 8),
-                          Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                    Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: Colors.white, size: 40))
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
