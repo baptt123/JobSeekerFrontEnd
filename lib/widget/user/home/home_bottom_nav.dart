@@ -92,16 +92,16 @@ class HomeBottomNav extends StatelessWidget {
 
           // 4. MESSAGE (✅ Đã xóa Badge)
           const BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Tin nhắn',
+            icon: Icon(Icons.supervised_user_circle_outlined),
+            activeIcon: Icon(Icons.supervised_user_circle),
+            label: 'Hồ sơ',
           ),
 
           // 5. PROFILE
           const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Cá nhân',
+            icon: Icon(Icons.support_outlined),
+            activeIcon: Icon(Icons.support),
+            label: 'Trợ giúp',
           ),
         ],
       ),

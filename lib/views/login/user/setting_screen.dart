@@ -1,3 +1,4 @@
+// lib/views/login/user/setting_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/user/theme_view_model.dart';
@@ -10,12 +11,15 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // AppBar sẽ tự động lấy màu từ appBarTheme trong MyApp
       appBar: AppBar(title: const Text("Cài đặt")),
+      // Nền body sẽ tự động lấy scaffoldBackgroundColor (Dark/Light)
       body: ListView(
         children: [
           const SizedBox(height: 16),
           ListTile(
             title: const Text("Chế độ tối"),
+            // Icon sẽ tự động có màu trắng trong Dark Mode
             leading: const Icon(Icons.dark_mode),
             trailing: Consumer<ThemeViewModel>(
               builder: (_, vm, __) => Switch(

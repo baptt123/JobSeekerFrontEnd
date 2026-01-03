@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -46,8 +47,6 @@ Future<void> main() async {
 
   // 3. Đăng ký background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  // LƯU Ý: Không gọi initialize() hay hỏi quyền ở đây để tránh tự động hiện Dialog.
 
   runApp(
     MultiProvider(

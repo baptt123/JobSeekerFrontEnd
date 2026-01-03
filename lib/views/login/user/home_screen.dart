@@ -11,8 +11,6 @@ import 'filter_screen.dart';
 import 'search_screen.dart';
 import 'job_detail_screen.dart';
 
-// [LƯU Ý]: File này không chứa BottomNavigationBar (MainScreen sẽ quản lý)
-
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class HomeScreen extends StatefulWidget {
@@ -75,16 +73,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final profileVM = context.watch<ProfileViewModel>();
     final currentUser = profileVM.user ?? homeVM.currentUser;
 
-    // Start timer nếu có dữ liệu randomJobs
     if (homeVM.randomJobs.isNotEmpty && (_bannerTimer == null || !_bannerTimer!.isActive)) {
       _startBannerTimer(homeVM.randomJobs.length);
     }
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF9F9F9),
-
-      // Không dùng AppBar hay BottomNavigationBar tại đây
+      // BỎ backgroundColor cứng, tự lấy từ Theme (Light/Dark)
       drawer: _buildDrawer(context, currentUser),
       body: SafeArea(
         child: Stack(
@@ -92,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
             RefreshIndicator(
               onRefresh: () => homeVM.refreshJobs(),
               color: kPrimaryColor,
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).cardTheme.color, // Màu nền loading quay
               edgeOffset: 0,
               child: _buildBody(context, homeVM, currentUser),
             ),
@@ -109,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBody(BuildContext context, HomeViewModel vm, dynamic user) {
-    // Nếu có lỗi và không có job nào
     if (vm.state == HomeState.error && vm.jobs.isEmpty) {
       return Center(
         child: Column(
@@ -134,10 +128,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Navbar tùy chỉnh (Menu, Title, Filter)
           _buildCustomNavBar(),
 
-          // 2. Header thông tin user + Thanh tìm kiếm
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -148,21 +140,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 right: 20,
                 child: GestureDetector(
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-                  child: _buildFakeSearchBar(),
+                  child: _buildFakeSearchBar(context),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 30), // Khoảng cách
-
-          // 3. [VỊ TRÍ BẠN YÊU CẦU] Banner Random Jobs
-          // Nó nằm ngay dưới thanh search và trên Text tiêu đề bên dưới
+          const SizedBox(height: 30),
           _buildDynamicBannerSection(vm.randomJobs),
+          const SizedBox(height: 24),
 
-          const SizedBox(height: 24), // Khoảng cách
-
-          // 4. Tiêu đề "Việc làm mới nhất" / "Gợi ý"
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
             child: Column(
@@ -170,7 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   vm.isRecommendedMode ? 'Việc làm phù hợp ✨' : 'Việc làm mới nhất',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                  // Dùng Theme để text tự đổi màu trắng/đen
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (vm.isRecommendedMode)
                   Padding(
@@ -186,7 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 16),
 
-          // 5. Danh sách Jobs
           if (vm.jobs.isEmpty && vm.state == HomeState.success)
             const Padding(
                 padding: EdgeInsets.all(40.0),
@@ -214,13 +201,11 @@ class _HomeScreenState extends State<HomeScreen> {
           if (vm.state == HomeState.loadingMore)
             const Padding(padding: EdgeInsets.all(20.0), child: Center(child: CircularProgressIndicator(color: kPrimaryColor))),
 
-          const SizedBox(height: 80), // Padding bottom để không bị che bởi BottomNav
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
-
-  // --- WIDGET CON ---
 
   Widget _buildCustomNavBar() {
     return Padding(
@@ -245,10 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget hiển thị Banner
   Widget _buildDynamicBannerSection(List<JobEntity> jobs) {
-    // Nếu không có job nào (list rỗng), widget này sẽ ẩn đi
-    // => Đây là lý do bạn không thấy nó nếu backend chưa trả về dữ liệu
     if (jobs.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
@@ -266,7 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // Dots indicator
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(jobs.length, (index) => AnimatedContainer(
@@ -290,7 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
       [const Color(0xFF11998e), const Color(0xFF38ef7d)],
       [const Color(0xFFFF416C), const Color(0xFFFF4B2B)],
     ];
-    // Chọn màu ngẫu nhiên dựa trên ID job để cố định màu cho mỗi job
     final gradient = gradients[(job.jobId) % gradients.length];
 
     return GestureDetector(
@@ -306,7 +286,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: Stack(
               children: [
-                // Background decoration
                 Positioned(top: -20, right: -20, child: Container(width: 100, height: 100, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle))),
                 Positioned(bottom: -40, left: -10, child: Container(width: 140, height: 140, decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle))),
 
@@ -327,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      // Logo
                       Container(
                         width: 50, height: 50,
                         padding: const EdgeInsets.all(4),
@@ -364,12 +342,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final bool isSaved = vm.isJobSaved(job.jobId);
 
+    // Lấy màu từ Theme (Dark/Light)
+    final cardColor = Theme.of(context).cardTheme.color;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor, // Tự động đổi màu nền
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -383,7 +365,11 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Container(
                   width: 56, height: 56,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade100)),
+                  decoration: BoxDecoration(
+                      color: Colors.white, // Logo công ty nên để nền trắng để dễ nhìn
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200)
+                  ),
                   padding: const EdgeInsets.all(4),
                   child: hasValidLogo
                       ? ClipRRect(
@@ -401,16 +387,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(job.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, height: 1.3, color: textColor), maxLines: 2, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
                       Text(job.company?.name ?? 'Công ty ẩn danh', style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8, runSpacing: 6,
                         children: [
-                          if (job.location != null) _buildTag(Icons.location_on_outlined, job.location!),
-                          _buildTag(Icons.attach_money, salaryText, color: Colors.green.shade700, bgColor: Colors.green.shade50),
-                          if (job.jobType != null) _buildTag(Icons.work_outline, job.jobType!, color: Colors.blue.shade700, bgColor: Colors.blue.shade50),
+                          if (job.location != null) _buildTag(context, Icons.location_on_outlined, job.location!),
+                          _buildTag(context, Icons.attach_money, salaryText, color: Colors.green.shade700, bgColor: Colors.green.withOpacity(0.1)),
+                          if (job.jobType != null) _buildTag(context, Icons.work_outline, job.jobType!, color: Colors.blue.shade700, bgColor: Colors.blue.withOpacity(0.1)),
                         ],
                       )
                     ],
@@ -432,16 +418,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTag(IconData icon, String text, {Color? color, Color? bgColor}) {
+  Widget _buildTag(BuildContext context, IconData icon, String text, {Color? color, Color? bgColor}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Điều chỉnh màu nền tag trong Dark Mode cho dễ đọc
+    final effectiveBgColor = bgColor ?? (isDark ? Colors.grey[800] : Colors.grey[100]);
+    final effectiveTextColor = color ?? (isDark ? Colors.grey[300] : Colors.grey[700]);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bgColor ?? Colors.grey[100], borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: effectiveBgColor, borderRadius: BorderRadius.circular(6)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color ?? Colors.grey[600]),
+          Icon(icon, size: 12, color: effectiveTextColor),
           const SizedBox(width: 4),
-          Flexible(child: Text(text, style: TextStyle(color: color ?? Colors.grey[700], fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 1)),
+          Flexible(child: Text(text, style: TextStyle(color: effectiveTextColor, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 1)),
         ],
       ),
     );
@@ -462,6 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool hasValidAvatar = avatarUrl != null && avatarUrl.isNotEmpty && avatarUrl.startsWith('http');
 
     return Drawer(
+      // Drawer background tự động lấy từ canvasColor trong Theme
       child: Column(
         children: [
           UserAccountsDrawerHeader(
@@ -474,11 +466,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: (!isUserLoggedIn || !hasValidAvatar) ? const Icon(Icons.person, size: 40, color: kPrimaryColor) : null,
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.document_scanner, color: Colors.blueAccent),
-            title: const Text("Quét CV (Scan PDF)"),
-            onTap: () { Navigator.pop(context); isUserLoggedIn ? Navigator.pushNamed(context, '/scan_pdf') : _showLoginRequired(context); },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.document_scanner, color: Colors.blueAccent),
+          //   title: const Text("Quét CV (Scan PDF)"),
+          //   onTap: () { Navigator.pop(context); isUserLoggedIn ? Navigator.pushNamed(context, '/scan_pdf') : _showLoginRequired(context); },
+          // ),
           ListTile(
             leading: const Icon(Icons.auto_awesome, color: Colors.deepPurpleAccent),
             title: const Text("Tạo CV với Gemini AI"),
@@ -486,7 +478,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.description, color: Colors.orange),
-            title: const Text("Quản lý CV"),
+            title: const Text("Quản lý CV và Scan CV"),
             onTap: () { Navigator.pop(context); isUserLoggedIn ? Navigator.pushNamed(context, '/manage_cv') : _showLoginRequired(context); },
           ),
           const Divider(),
@@ -518,11 +510,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFakeSearchBar() {
+  Widget _buildFakeSearchBar(BuildContext context) {
     return Container(
       height: 50,
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15.0), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]),
+      decoration: BoxDecoration(
+        // Đổi màu nền thanh tìm kiếm theo Theme
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: BorderRadius.circular(15.0),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]
+      ),
       child: Row(children: [const Icon(Icons.search, color: kPrimaryColor), const SizedBox(width: 12), const Expanded(child: Text('Tìm kiếm việc làm, công ty...', style: TextStyle(color: Colors.grey, fontSize: 14), overflow: TextOverflow.ellipsis))]),
     );
   }

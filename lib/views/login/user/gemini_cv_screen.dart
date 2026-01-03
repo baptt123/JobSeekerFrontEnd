@@ -18,7 +18,7 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
     String prompt = _promptController.text.trim();
     if (prompt.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text("Vui lòng nhập mô tả bản thân!"),
             backgroundColor: Colors.redAccent,
           )
@@ -29,10 +29,7 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Gọi API lấy file PDF dạng bytes
       List<int> pdfBytes = await _cvService.generateCVAI(prompt);
-
-      // 2. Lưu thành file tạm trên thiết bị
       final tempDir = await getTemporaryDirectory();
       final filePath = '${tempDir.path}/cv_ai_gen_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File(filePath);
@@ -40,7 +37,6 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
 
       if (!mounted) return;
 
-      // 3. Chuyển sang màn hình xem trước (Preview)
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -52,12 +48,12 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
       showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text("Rất tiếc 😓"),
+            title: const Text("Rất tiếc 😓"),
             content: Text("Có lỗi xảy ra: ${e.toString().replaceAll('Exception:', '')}"),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text("Đóng")
+                  child: const Text("Đóng")
               )
             ],
           )
@@ -69,10 +65,14 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Màu text tiêu đề
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? Colors.blueAccent[100] : Colors.blue[900];
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      // BỎ backgroundColor cứng
       appBar: AppBar(
-        title: Text("Tạo CV AI Thông Minh"),
+        title: const Text("Tạo CV AI Thông Minh"),
         backgroundColor: Colors.blueAccent,
         elevation: 0,
       ),
@@ -83,28 +83,28 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header Icon
-                Center(
+                const Center(
                   child: Icon(Icons.auto_awesome, size: 60, color: Colors.amber),
                 ),
-                SizedBox(height: 15),
+                const SizedBox(height: 15),
                 Text(
                   "Bạn muốn CV thế nào?",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue[900]),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: titleColor),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   "Mô tả kinh nghiệm, kỹ năng và mong muốn của bạn.\nGemini sẽ thiết kế CV chuyên nghiệp ngay lập tức.",
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
-                SizedBox(height: 25),
+                const SizedBox(height: 25),
 
                 // Input Card
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  color: Theme.of(context).cardTheme.color, // Tự động đổi màu
                   child: Padding(
                     padding: const EdgeInsets.all(5.0),
                     child: TextField(
@@ -112,22 +112,22 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
                       maxLines: 8,
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(15),
+                        contentPadding: const EdgeInsets.all(15),
                         hintText: "Ví dụ: Tôi tên Nam, Developer Flutter 2 năm kinh nghiệm. Kỹ năng: Dart, Git, Firebase. Đã làm app TMĐT...",
                         hintStyle: TextStyle(color: Colors.grey[400]),
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: 30),
+                const SizedBox(height: 30),
 
                 // Button
                 SizedBox(
                   height: 50,
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _generate,
-                    icon: Icon(Icons.star),
-                    label: Text("Tạo CV Ngay", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.star),
+                    label: const Text("Tạo CV Ngay", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -142,7 +142,7 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
           if (_isLoading)
             Container(
               color: Colors.black45,
-              child: Center(
+              child: const Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

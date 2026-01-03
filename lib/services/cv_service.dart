@@ -89,4 +89,31 @@ class CVService {
       throw Exception(e.response?.data['message'] ?? 'Lỗi xóa CV');
     }
   }
+  // --- HÀM MỚI: Upload & Parse AI ---
+  Future<dynamic> uploadAndParseCv(File file) async {
+    String fileName = file.path.split('/').last;
+    FormData formData = FormData.fromMap({
+      "file": await MultipartFile.fromFile(
+        file.path,
+        filename: fileName,
+        contentType: MediaType('application', 'pdf'),
+      ),
+    });
+
+    try {
+      // Gọi endpoint mới ở Backend
+      Response response = await _dio.post(
+        '/cv/upload-parse-cv',
+        data: formData,
+        // Tăng timeout vì AI xử lý có thể lâu (10-30s)
+        options: Options(receiveTimeout: const Duration(seconds: 60)),
+      );
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response != null && e.response!.data != null) {
+        throw Exception(e.response!.data['message'] ?? 'Lỗi xử lý CV');
+      }
+      throw Exception('Lỗi kết nối server: ${e.message}');
+    }
+  }
 }

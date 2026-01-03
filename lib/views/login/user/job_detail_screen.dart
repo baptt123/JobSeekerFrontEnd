@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
+import '../../../services/job_application_service.dart'; // Import service
 import 'company_detail_screen.dart';
 import '../../../widget/user/job/comment_section.dart';
 
@@ -55,6 +56,49 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
           ),
         );
       },
+    );
+  }
+
+  // [NEW] Dialog xác nhận hủy ứng tuyển
+  void _showCancelConfirmation(BuildContext context, int jobId, JobDetailViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Xác nhận hủy"),
+        content: const Text("Bạn có chắc chắn muốn hủy ứng tuyển công việc này không?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Không", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Đóng dialog
+              try {
+                // Gọi service hủy
+                await JobApplicationService().cancelApplication(jobId);
+                // Thông báo thành công
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Đã hủy ứng tuyển thành công")),
+                  );
+                  // Refresh lại trạng thái trong ViewModel để UI cập nhật
+                  // Giả sử ViewModel có hàm refresh hoặc set lại isApplied = false
+                  // Nếu không có, bạn cần thêm vào VM. Tạm thời gọi lại fetchJobDetail
+                  vm.fetchJobDetail(widget.jobTitle);
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Lỗi: ${e.toString().replaceAll('Exception: ', '')}")),
+                  );
+                }
+              }
+            },
+            child: const Text("Có, hủy ngay", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -190,7 +234,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
           const SizedBox(height: 24),
 
           // Tích hợp CommentSection
-          // Sử dụng Provide.value để truyền VM hiện tại xuống widget con
           ChangeNotifierProvider.value(
             value: vm,
             child: CommentSection(jobId: job.jobId),
@@ -239,6 +282,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20, color: kPrimaryColor), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)), const SizedBox(height: 2), Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))]))]);
   }
 
+  // [UPDATED] Hàm dựng Bottom Action có thêm nút Hủy
   Widget _buildBottomAction(BuildContext context, JobDetailViewModel vm, JobEntity job) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -246,9 +290,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
       child: SafeArea(
         child: Row(
           children: [
-            // Expanded(child: OutlinedButton.icon(onPressed: () { final recruiter = job.recruiter; if (recruiter == null || recruiter.id == 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Thông tin người tuyển dụng không khả dụng."))); return; } Navigator.push(context, MaterialPageRoute(builder: (context) => MessageScreen(otherUserId: recruiter.id, otherUserName: recruiter.fullName, otherUserAvatar: recruiter.avatarUrl ?? ""))); }, icon: const Icon(Icons.chat_bubble_outline), label: const Text("Chat ngay", style: TextStyle(fontWeight: FontWeight.bold)), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: kPrimaryColor), foregroundColor: kPrimaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
             const SizedBox(width: 16),
-            Expanded(child: ElevatedButton(onPressed: vm.isApplied ? null : () => _showApplyBottomSheet(context, vm), style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, disabledBackgroundColor: Colors.grey[300], padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: Text(vm.isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay", style: TextStyle(color: vm.isApplied ? Colors.grey : Colors.white, fontWeight: FontWeight.bold)))),
+            Expanded(
+              child: vm.isApplied
+              // Nếu đã ứng tuyển -> Hiển thị nút Hủy (Màu đỏ)
+                  ? ElevatedButton(
+                  onPressed: () => _showCancelConfirmation(context, job.jobId, vm),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent, // Màu đỏ cho hành động hủy
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  ),
+                  child: const Text("Hủy ứng tuyển", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+              )
+              // Nếu chưa ứng tuyển -> Hiển thị nút Ứng tuyển ngay (Màu tím)
+                  : ElevatedButton(
+                  onPressed: () => _showApplyBottomSheet(context, vm),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryColor,
+                      disabledBackgroundColor: Colors.grey[300],
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                  ),
+                  child: const Text("Ứng tuyển ngay", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+              ),
+            ),
           ],
         ),
       ),

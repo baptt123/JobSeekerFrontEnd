@@ -15,7 +15,6 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
   @override
   void initState() {
     super.initState();
-    // Gọi API khi màn hình được tạo
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SavedJobsViewModel>().fetchSavedJobs();
     });
@@ -24,25 +23,18 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      // BỎ backgroundColor cứng
       appBar: AppBar(
-        title: const Text("Công việc đã lưu", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        title: Text("Công việc đã lưu", style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white)),
         centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false),
-        ),
+        // AppBar dùng Theme mặc định
       ),
       body: Consumer<SavedJobsViewModel>(
         builder: (context, vm, _) {
-          // 1. Loading
           if (vm.state == SavedJobsState.loading) {
             return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
 
-          // 2. [CẬP NHẬT] Xử lý Lỗi (Mạng/API)
           if (vm.state == SavedJobsState.error) {
             return Center(
               child: Column(
@@ -57,7 +49,7 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    onPressed: () => vm.fetchSavedJobs(), // Gọi lại API
+                    onPressed: () => vm.fetchSavedJobs(),
                     icon: const Icon(Icons.refresh, size: 18),
                     label: const Text("Thử lại"),
                     style: ElevatedButton.styleFrom(
@@ -70,7 +62,6 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
             );
           }
 
-          // 3. Unauthorized (Chưa đăng nhập)
           if (vm.state == SavedJobsState.unauthorized) {
             return Center(
               child: Column(
@@ -88,17 +79,14 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
             );
           }
 
-          // 4. Danh sách trống
           if (vm.savedJobs.isEmpty) return _buildEmptyState();
 
-          // 5. Hiển thị danh sách
           return ListView.separated(
             padding: const EdgeInsets.all(20),
             itemCount: vm.savedJobs.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (ctx, index) {
               final job = vm.savedJobs[index];
-              // ... (Phần UI Card giữ nguyên như code cũ của bạn)
               final logoUrl = job.company?.logoUrl;
               final bool hasValidLogo = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
               final salaryText = (job.salaryMin != null && job.salaryMax != null)
@@ -118,7 +106,7 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardTheme.color, // Tự động đổi màu
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
                   ),
@@ -127,7 +115,7 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
                       Container(
                         width: 60, height: 60,
                         decoration: BoxDecoration(
-                          color: Colors.grey[50],
+                          color: Colors.white, // Logo để nền trắng
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
@@ -141,7 +129,7 @@ class _SavedJobsScreenState extends State<SavedJobsScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(job.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(job.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color), maxLines: 1, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: 4),
                           Text(job.company?.name ?? "Unknown", style: const TextStyle(color: Colors.grey, fontSize: 13)),
                           const SizedBox(height: 8),

@@ -1,14 +1,11 @@
-// lib/myapp.dart
 import 'package:flutter/material.dart';
 import 'package:job_seeker_frontend/utils/global_keys.dart';
-import 'package:job_seeker_frontend/views/login/user/cv_preview_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/manage_cv_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/utils/app_colors.dart';
 import 'package:job_seeker_frontend/view_models/user/theme_view_model.dart';
 import 'package:job_seeker_frontend/utils/responsive_util.dart';
 
-// Import các màn hình (giữ nguyên như cũ của bạn)
+// Import các màn hình (giữ nguyên import của bạn)
 import 'package:job_seeker_frontend/views/login/user/splash_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/login_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/main_screen.dart';
@@ -22,6 +19,8 @@ import 'package:job_seeker_frontend/views/login/user/gemini_cv_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/notification_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/manage_cv_screen.dart';
+import 'package:job_seeker_frontend/views/login/user/cv_preview_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -36,53 +35,103 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           themeMode: themeVM.themeMode,
 
-          // --- CẤU HÌNH LIGHT THEME ---
+          // --- LIGHT THEME ---
           theme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.light,
             primaryColor: AppColors.primary,
             scaffoldBackgroundColor: AppColors.backgroundLight,
             fontFamily: 'Inter',
+            canvasColor: Colors.white, // Màu nền Drawer/Dropdown
+
             appBarTheme: const AppBarTheme(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               elevation: 0,
             ),
-            // ✅ FIX LỖI: Dùng CardThemeData
+
             cardTheme: const CardThemeData(
               color: AppColors.cardLight,
               elevation: 2,
               margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             ),
+
+            // SỬA LỖI: Dùng DialogThemeData cho Flutter bản mới
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+            ),
+
+            bottomSheetTheme: const BottomSheetThemeData(
+              backgroundColor: Colors.white,
+              modalBackgroundColor: Colors.white,
+            ),
+
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              backgroundColor: Colors.white,
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: Colors.grey,
+            ),
+
             colorScheme: const ColorScheme.light(
               primary: AppColors.primary,
               secondary: AppColors.accent,
               surface: AppColors.cardLight,
+              onSurface: Colors.black87,
             ),
           ),
 
-          // --- CẤU HÌNH DARK THEME ---
+          // --- DARK THEME (Đã tối ưu) ---
           darkTheme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.dark,
             primaryColor: AppColors.primary,
-            scaffoldBackgroundColor: AppColors.backgroundDark,
+            scaffoldBackgroundColor: AppColors.backgroundDark, // Nền tối
             fontFamily: 'Inter',
+
+            // Quan trọng: Đổi màu nền Drawer/Dropdown thành tối
+            canvasColor: AppColors.backgroundDark,
+
             appBarTheme: const AppBarTheme(
               backgroundColor: AppColors.backgroundDark,
               foregroundColor: Colors.white,
               elevation: 0,
             ),
-            // ✅ FIX LỖI: Dùng CardThemeData
+
             cardTheme: const CardThemeData(
-              color: AppColors.cardDark,
+              color: AppColors.cardDark, // Card màu xám tối
               elevation: 2,
               margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             ),
+
+            // SỬA LỖI: Dùng DialogThemeData
+            dialogTheme: const DialogThemeData(
+              backgroundColor: AppColors.cardDark,
+              surfaceTintColor: Colors.transparent,
+            ),
+
+            bottomSheetTheme: const BottomSheetThemeData(
+              backgroundColor: AppColors.cardDark,
+              modalBackgroundColor: AppColors.cardDark,
+              surfaceTintColor: Colors.transparent,
+            ),
+
+            // Thanh điều hướng dưới cùng màu tối
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              backgroundColor: AppColors.backgroundDark,
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: Colors.grey,
+            ),
+
+            dividerTheme: const DividerThemeData(color: Colors.white12),
+
             colorScheme: const ColorScheme.dark(
               primary: AppColors.primary,
               secondary: AppColors.accent,
               surface: AppColors.cardDark,
+              background: AppColors.backgroundDark,
+              onBackground: Colors.white,
+              onSurface: Colors.white,
             ),
           ),
 
@@ -92,7 +141,7 @@ class MyApp extends StatelessWidget {
 
           home: const SplashScreen(),
 
-          // Giữ nguyên Routes của bạn
+          // Routes giữ nguyên
           routes: {
             '/login': (_) => const LoginScreen(),
             '/home': (_) => const MainScreen(),
@@ -107,7 +156,7 @@ class MyApp extends StatelessWidget {
             '/notification': (_) => const NotificationScreen(),
             '/profile': (_) => const ProfileScreen(),
             '/manage_cv': (_) => ManageCvScreen(),
-            '/cv_preview': (_) =>  CvPreviewScreen(localPath: '',),
+            '/cv_preview': (_) => CvPreviewScreen(localPath: '',),
           },
         );
       },

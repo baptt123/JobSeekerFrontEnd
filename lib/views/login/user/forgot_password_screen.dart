@@ -12,18 +12,29 @@ class ForgotPasswordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🎨 Lấy thông tin Theme hiện tại để xử lý màu sắc
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Màu nền Card/Input: Tự động đổi giữa Trắng (Light) và Xám tối (Dark)
+    final cardColor = theme.cardTheme.color ?? Colors.white;
+    // Màu chữ chính: Tự động đổi giữa Đen (Light) và Trắng (Dark)
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
+
     return ChangeNotifierProvider(
       create: (_) => ForgotPasswordViewModel(),
       // GestureDetector để ẩn bàn phím khi chạm ra ngoài
       child: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Scaffold(
-          backgroundColor: Colors.grey[50],
+          // ✅ SỬA: Dùng màu nền từ theme (không gán cứng Colors.grey[50])
+          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black87),
+              // ✅ SỬA: Icon tự động đổi màu Trắng/Đen
+              icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -41,7 +52,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                       height: 120,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor, // ✅ SỬA: Nền icon đổi màu theo theme
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -55,20 +66,25 @@ class ForgotPasswordScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
 
-                    // 2. Tiêu đề & Mô tả (Đã sửa nội dung cho đúng logic Backend)
-                    const Text(
+                    // 2. Tiêu đề & Mô tả
+                    Text(
                       "Quên mật khẩu?",
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: theme.textTheme.titleLarge?.color, // ✅ SỬA: Màu chữ tiêu đề
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       "Nhập email đã đăng ký. Hệ thống sẽ cấp lại một mật khẩu mới và gửi vào email của bạn.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey, fontSize: 15, height: 1.5),
+                      // ✅ SỬA: Màu chữ mô tả nhạt hơn chút trong Dark mode
+                      style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey,
+                          fontSize: 15,
+                          height: 1.5
+                      ),
                     ),
                     const SizedBox(height: 40),
 
@@ -79,14 +95,17 @@ class ForgotPasswordScreen extends StatelessWidget {
                         padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
                         child: Text(
                           "Địa chỉ Email",
-                          style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              color: textColor, // ✅ SỬA: Màu chữ nhãn
+                              fontWeight: FontWeight.w600
+                          ),
                         ),
                       ),
                     ),
 
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor, // ✅ SỬA: Nền ô nhập liệu
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -99,13 +118,14 @@ class ForgotPasswordScreen extends StatelessWidget {
                       child: TextField(
                         controller: vm.emailController,
                         keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                        // ✅ SỬA: Màu chữ người dùng nhập
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
                         decoration: InputDecoration(
                           hintText: "example@gmail.com",
-                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
                           prefixIcon: const Icon(Icons.email_outlined, color: kPrimaryColor),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: cardColor, // ✅ SỬA: Màu nền bên trong TextField
                           contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                           focusedBorder: OutlineInputBorder(
@@ -117,7 +137,6 @@ class ForgotPasswordScreen extends StatelessWidget {
                     ),
 
                     // 4. Thông báo Lỗi / Thành công
-                    // Sử dụng AnimatedSwitcher để hiệu ứng hiện thông báo mượt hơn
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
                       child: (vm.successMessage != null || vm.errorMessage != null)
@@ -147,7 +166,10 @@ class ForgotPasswordScreen extends StatelessWidget {
                               child: Text(
                                 vm.successMessage ?? vm.errorMessage!,
                                 style: TextStyle(
-                                  color: vm.successMessage != null ? Colors.green[800] : Colors.red[800],
+                                  // ✅ SỬA: Điều chỉnh màu chữ thông báo để dễ đọc trên nền tối
+                                  color: vm.successMessage != null
+                                      ? (isDark ? Colors.greenAccent : Colors.green[800])
+                                      : (isDark ? Colors.redAccent : Colors.red[800]),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -201,7 +223,8 @@ class ForgotPasswordScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Đã nhận được mật khẩu? ", style: TextStyle(color: Colors.grey)),
+                        // ✅ SỬA: Màu chữ "Đã nhận được..."
+                        Text("Đã nhận được mật khẩu? ", style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey)),
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: const Text(

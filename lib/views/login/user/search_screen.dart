@@ -4,22 +4,23 @@ import '../../../view_models/user/search_view_model.dart';
 import '../../../widget/user/search/search_body.dart';
 
 const Color kPrimaryColor = Color(0xFF6C63FF);
-const Color kBackgroundColor = Color(0xFFF8F9FD);
 
 class SearchScreen extends StatelessWidget {
   const SearchScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Lấy theme để dùng chung cho toàn màn hình
+    final theme = Theme.of(context);
+
     return ChangeNotifierProvider(
       create: (_) => SearchViewModel(),
       child: Consumer<SearchViewModel>(
         builder: (context, vm, _) {
           return Scaffold(
-            backgroundColor: kBackgroundColor,
+            // BỎ kBackgroundColor cứng, dùng theme
+            backgroundColor: theme.scaffoldBackgroundColor,
             appBar: _buildAppBar(context, vm),
-            // ✅ Đã xóa Column và phần FilterChips gây lỗi
-            // SearchBody được đưa ra làm body chính, tự động chiếm hết không gian
             body: SearchBody(viewModel: vm),
           );
         },
@@ -28,11 +29,21 @@ class SearchScreen extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, SearchViewModel vm) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Màu nền ô input: Dark dùng xám đậm, Light dùng xám rất nhạt
+    final inputFillColor = isDark ? Colors.grey[800] : Colors.grey[100];
+    final inputBorderColor = isDark ? Colors.grey[700]! : Colors.grey.shade200;
+    final hintColor = isDark ? Colors.grey[400] : Colors.grey[500];
+
     return AppBar(
-      backgroundColor: Colors.white,
+      // Màu nền AppBar theo Theme
+      backgroundColor: theme.appBarTheme.backgroundColor,
       elevation: 0,
+      // Icon Back tự động theo Theme
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 20),
+        icon: Icon(Icons.arrow_back_ios_new, color: theme.iconTheme.color, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
       titleSpacing: 0,
@@ -40,26 +51,27 @@ class SearchScreen extends StatelessWidget {
         margin: const EdgeInsets.only(right: 16),
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: inputFillColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: inputBorderColor),
         ),
         child: TextField(
           controller: vm.searchController,
           focusNode: vm.searchFocusNode,
           textAlignVertical: TextAlignVertical.center,
-          style: const TextStyle(color: Colors.black87, fontSize: 15),
+          // Màu chữ nhập vào
+          style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 15),
           decoration: InputDecoration(
             hintText: "Tìm kiếm việc làm, công ty...",
-            hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-            prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 22),
+            hintStyle: TextStyle(color: hintColor, fontSize: 14),
+            prefixIcon: Icon(Icons.search, color: hintColor, size: 22),
             suffixIcon: vm.searchController.text.isNotEmpty
                 ? GestureDetector(
               onTap: () {
                 vm.searchController.clear();
                 vm.onSearchQueryChanged('');
               },
-              child: Icon(Icons.close, color: Colors.grey[500], size: 18),
+              child: Icon(Icons.close, color: hintColor, size: 18),
             )
                 : null,
             border: InputBorder.none,

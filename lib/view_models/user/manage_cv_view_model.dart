@@ -1,13 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/cv_service.dart';
-// Import model UserCVEntity nếu bạn đã có, hoặc dùng dynamic tạm thời
-import '../../models/user-cv-entity.dart';
 
 class ManageCvViewModel extends ChangeNotifier {
   final CVService _cvService = CVService();
 
-  List<dynamic> _cvList = []; // Danh sách CV
+  List<dynamic> _cvList = [];
   List<dynamic> get cvList => _cvList;
 
   bool _isLoading = false;
@@ -39,7 +37,6 @@ class ManageCvViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await _cvService.setDefaultCV(cvId);
-      // Refresh lại list để cập nhật UI icon mặc định
       await getMyCVs();
       return true;
     } catch (e) {
@@ -56,7 +53,6 @@ class ManageCvViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await _cvService.deleteCV(cvId);
-      // Xóa thành công thì load lại list
       await getMyCVs();
       return true;
     } catch (e) {

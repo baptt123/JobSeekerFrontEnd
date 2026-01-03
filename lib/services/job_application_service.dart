@@ -5,7 +5,7 @@ import '../utils/dio_client.dart';
 class JobApplicationService {
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}/job-application');
 
-// [UPDATE] Nhận thêm cvId và coverLetter
+  // [UPDATE] Nhận thêm cvId và coverLetter
   Future<void> applyForJob({
     required int jobId,
     int? cvId,
@@ -22,6 +22,16 @@ class JobApplicationService {
     } on DioException catch (e) {
       // Trả về lỗi chi tiết từ backend để hiển thị
       throw Exception(e.response?.data['message'] ?? 'Lỗi ứng tuyển');
+    }
+  }
+
+  // [NEW] Hàm hủy ứng tuyển
+  Future<void> cancelApplication(int jobId) async {
+    try {
+      // Gọi method PATCH /cancel/:jobId
+      await _dio.patch('/cancel/$jobId');
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Lỗi hủy ứng tuyển');
     }
   }
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:job_seeker_frontend/view_models/user/notification_view_model.dart';
 
+// Nếu bạn đã có AppColors trong utils, hãy import nó thay vì khai báo lại
+// import 'package:job_seeker_frontend/utils/app_colors.dart';
 const Color kPrimaryColor = Color(0xFF6C63FF);
 
 class NotificationScreen extends StatelessWidget {
@@ -9,14 +11,28 @@ class NotificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lấy thông tin theme hiện tại để xử lý logic màu sắc custom
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      // BỎ backgroundColor cứng, tự lấy từ Theme
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Thông Báo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        title: Text(
+          'Thông Báo',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            // Màu chữ tự động theo Theme (Đen ở Light, Trắng ở Dark)
+            color: theme.textTheme.titleLarge?.color,
+          ),
+        ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        // AppBar dùng màu của Theme, bỏ gán cứng
+        backgroundColor: theme.appBarTheme.backgroundColor,
         elevation: 0,
-        leading: const BackButton(color: Colors.black87),
+        // BackButton tự động lấy màu từ IconTheme/AppBarTheme
+        leading: const BackButton(),
         actions: [
           Consumer<NotificationViewModel>(
             builder: (context, vm, _) {
@@ -28,7 +44,10 @@ class NotificationScreen extends StatelessWidget {
                   await context.read<NotificationViewModel>().markAllAsRead();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Đã đánh dấu tất cả là đã đọc"), backgroundColor: Colors.green),
+                      const SnackBar(
+                        content: Text("Đã đánh dấu tất cả là đã đọc"),
+                        backgroundColor: Colors.green,
+                      ),
                     );
                   }
                 },
@@ -44,7 +63,7 @@ class NotificationScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
 
-          // 2. [CẬP NHẬT] Xử lý Lỗi
+          // 2. Xử lý Lỗi
           if (vm.state == NotificationState.error) {
             return Center(
               child: Column(
@@ -52,10 +71,10 @@ class NotificationScreen extends StatelessWidget {
                 children: [
                   const Icon(Icons.wifi_off_rounded, size: 60, color: Colors.redAccent),
                   const SizedBox(height: 16),
-                  const Text("Không tải được thông báo", style: TextStyle(color: Colors.grey)),
+                  Text("Không tải được thông báo", style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => vm.fetchNotifications(), // Thử lại
+                    onPressed: () => vm.fetchNotifications(),
                     style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor, foregroundColor: Colors.white),
                     child: const Text("Tải lại"),
                   )
@@ -65,18 +84,28 @@ class NotificationScreen extends StatelessWidget {
           }
 
           // 3. Trống
-          if (vm.notifications.isEmpty) return _buildEmptyState();
+          if (vm.notifications.isEmpty) return _buildEmptyState(context);
 
           // 4. Danh sách
           return RefreshIndicator(
             onRefresh: vm.fetchNotifications,
             color: kPrimaryColor,
+            backgroundColor: theme.cardTheme.color, // Màu nền quay loading
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: vm.notifications.length,
               itemBuilder: (context, index) {
                 final noti = vm.notifications[index];
-                // ... (Phần UI Item giữ nguyên như code cũ)
+
+                // --- XỬ LÝ MÀU ITEM ---
+                // Nếu ĐÃ ĐỌC: Dùng màu Card (Trắng hoặc Xám tối)
+                // Nếu CHƯA ĐỌC: Dùng màu tím nhạt (Đậm hơn chút nếu ở Dark Mode để dễ đọc)
+                final Color itemBgColor = noti.isRead
+                    ? theme.cardTheme.color!
+                    : kPrimaryColor.withOpacity(isDark ? 0.2 : 0.08);
+
+                final Color borderColor = isDark ? Colors.white12 : Colors.grey.shade200;
+
                 return GestureDetector(
                   onTap: () {
                     if (!noti.isRead) vm.markAsRead(noti.notificationId);
@@ -85,30 +114,68 @@ class NotificationScreen extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: noti.isRead ? Colors.white : kPrimaryColor.withOpacity(0.08),
+                      color: itemBgColor,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: borderColor),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Icon Container
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: noti.isRead ? Colors.grey[100] : Colors.white, shape: BoxShape.circle),
-                          child: Icon(Icons.notifications_rounded, color: noti.isRead ? Colors.grey : kPrimaryColor, size: 24),
+                          decoration: BoxDecoration(
+                            // Nền icon thay đổi theo trạng thái đọc
+                              color: noti.isRead
+                                  ? (isDark ? Colors.grey[800] : Colors.grey[100])
+                                  : (isDark ? Colors.white10 : Colors.white),
+                              shape: BoxShape.circle
+                          ),
+                          child: Icon(
+                              Icons.notifications_rounded,
+                              color: noti.isRead ? Colors.grey : kPrimaryColor,
+                              size: 24
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(noti.title ?? 'Thông báo mới', style: TextStyle(fontWeight: noti.isRead ? FontWeight.w600 : FontWeight.bold, fontSize: 15, color: Colors.black87)),
-                            const SizedBox(height: 6),
-                            Text(noti.message ?? '', style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.4)),
-                            const SizedBox(height: 8),
-                            Text("${noti.createdAt.day}/${noti.createdAt.month} lúc ${noti.createdAt.hour}:${noti.createdAt.minute.toString().padLeft(2, '0')}", style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                          ]),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    noti.title ?? 'Thông báo mới',
+                                    style: TextStyle(
+                                        fontWeight: noti.isRead ? FontWeight.w600 : FontWeight.bold,
+                                        fontSize: 15,
+                                        // Màu chữ tiêu đề tự động
+                                        color: theme.textTheme.bodyLarge?.color
+                                    )
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                    noti.message ?? '',
+                                    style: TextStyle(
+                                      // Màu chữ nội dung (dùng caption hoặc bodyMedium)
+                                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                                        fontSize: 13,
+                                        height: 1.4
+                                    )
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                    "${noti.createdAt.day}/${noti.createdAt.month} lúc ${noti.createdAt.hour}:${noti.createdAt.minute.toString().padLeft(2, '0')}",
+                                    style: TextStyle(fontSize: 11, color: Colors.grey[500])
+                                ),
+                              ]
+                          ),
                         ),
                         if (!noti.isRead)
-                          Container(margin: const EdgeInsets.only(left: 8, top: 5), width: 10, height: 10, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle))
+                          Container(
+                              margin: const EdgeInsets.only(left: 8, top: 5),
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)
+                          )
                       ],
                     ),
                   ),
@@ -121,12 +188,21 @@ class NotificationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle), child: const Icon(Icons.notifications_off_outlined, size: 60, color: Colors.grey)),
+          Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                // Màu nền tròn icon empty
+                  color: isDark ? Colors.grey[800] : Colors.grey[100],
+                  shape: BoxShape.circle
+              ),
+              child: const Icon(Icons.notifications_off_outlined, size: 60, color: Colors.grey)
+          ),
           const SizedBox(height: 20),
           const Text("Không có thông báo nào", style: TextStyle(color: Colors.grey, fontSize: 16)),
         ],

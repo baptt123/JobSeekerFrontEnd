@@ -14,7 +14,7 @@ class FirebaseMessagingService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final UserService _userService = UserService();
 
-  // 1. Chỉ khởi tạo các bộ lắng nghe sự kiện (Không chứa logic hỏi quyền)
+  // 1. Chỉ khởi tạo các bộ lắng nghe sự kiện
   void initNotificationListeners(Function(RemoteMessage) onMessageCallback) {
     // Khi app đang mở (Foreground)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -42,63 +42,32 @@ class FirebaseMessagingService {
     });
   }
 
-  // 2. 🔥 HÀM ÉP BUỘC HỎI QUYỀN TRÊN MỌI PHIÊN BẢN
+  // 2. 🔥 HÀM HỎI QUYỀN MẶC ĐỊNH (Sửa lại theo yêu cầu)
+  // Xóa bỏ dialog custom, dùng dialog chuẩn của Firebase/OS
   Future<void> forceRequestPermission(BuildContext context) async {
-    bool userAgreed = false;
+    // Gọi hàm requestPermission của Firebase.
+    // Hàm này tự động xử lý việc hiển thị Dialog hệ thống trên iOS và Android 13+.
+    // Nếu user đã chọn trước đó, nó sẽ trả về trạng thái ngay mà không hiện lại popup.
+    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+      providesAppNotificationSettings: true,
+    );
 
-    if (Platform.isAndroid) {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
-      final sdkInt = androidInfo.version.sdkInt;
+    print('User permission status: ${settings.authorizationStatus}');
 
-      if (sdkInt >= 33) {
-        // Android 13+: Gọi hộp thoại hệ thống trực tiếp
-        PermissionStatus status = await Permission.notification.request();
-        userAgreed = status.isGranted;
-      } else {
-        // Android < 13: Tự tạo hộp thoại hỏi vì hệ thống không có dialog này
-        userAgreed = await _showCustomRationaleDialog(context) ?? false;
-      }
-    } else if (Platform.isIOS) {
-      // iOS: Sử dụng hộp thoại hệ thống của Firebase
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
-        alert: true, badge: true, sound: true,
-      );
-      userAgreed = settings.authorizationStatus == AuthorizationStatus.authorized;
-    }
-
-    if (userAgreed) {
-      print("✅ Người dùng đồng ý nhận thông báo.");
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print("✅ Người dùng ĐỒNG Ý nhận thông báo.");
+      // Chỉ khi đồng ý mới lấy token và gửi lên server
       await _setupNotificationAfterAgreement();
     } else {
-      print("❌ Người dùng từ chối nhận thông báo.");
-      // Xóa token trên server để đảm bảo không gửi Push
+      print("❌ Người dùng TỪ CHỐI hoặc chưa cấp quyền.");
+      // Nếu từ chối, xóa token trên server để không gửi thông báo
       await _userService.updateFcmToken(null);
       await _firebaseMessaging.unsubscribeFromTopic('job_alerts');
     }
-  }
-
-  // Hộp thoại giải thích tùy chỉnh cho Android cũ
-  Future<bool?> _showCustomRationaleDialog(BuildContext context) async {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text("Bật thông báo ứng dụng"),
-        content: const Text(
-            "Bạn có muốn nhận thông báo về việc làm mới, tin nhắn từ nhà tuyển dụng và cập nhật trạng thái hồ sơ không?"
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("TỪ CHỐI", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("ĐỒNG Ý", style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 
   // Luồng cấu hình sau khi có sự đồng ý
@@ -127,12 +96,15 @@ class FirebaseMessagingService {
     if (type == 'CHAT_MSG' || data['click_action'] == 'CHAT_DETAIL') {
       final otherUserIdStr = data['senderId'] ?? data['other_user_id'];
       if (otherUserIdStr != null) {
+        // Logic điều hướng chat (giữ nguyên)
       }
     } else if (type == 'NEW_JOB_POST' || type == 'APPLICATION_UPDATE') {
       if (data['job_title'] != null) {
-        navigator.push(MaterialPageRoute(
-          builder: (context) => JobDetailScreen(jobTitle: data['job_title']),
-        ));
+        navigator.push(
+          MaterialPageRoute(
+            builder: (context) => JobDetailScreen(jobTitle: data['job_title']),
+          ),
+        );
       }
     }
   }

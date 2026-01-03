@@ -12,9 +12,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // ... (Giữ nguyên các hàm _showEditProfileBottomSheet, _buildTextField)
+
   void _showEditProfileBottomSheet(BuildContext context, UserEntity user, ProfileViewModel vm) {
-    // ... (Giữ nguyên logic cũ của bạn)
     final nameController = TextEditingController(text: user.fullName);
     final phoneController = TextEditingController(text: user.phone ?? '');
     final cityController = TextEditingController(text: user.city ?? '');
@@ -23,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      // Modal tự lấy màu từ Theme, không cần chỉnh tay
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, top: 20, left: 20, right: 20),
@@ -57,23 +57,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType inputType = TextInputType.text}) {
-    return TextField(controller: controller, keyboardType: inputType, decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon, color: Colors.grey), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)));
+    return TextField(
+        controller: controller,
+        keyboardType: inputType,
+        decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: Icon(icon, color: Colors.grey),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
+        )
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Lấy màu Theme hiện tại
+    final cardColor = Theme.of(context).cardTheme.color;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      // BỎ backgroundColor cứng
       body: Consumer<ProfileViewModel>(
         builder: (context, vm, _) {
           final user = vm.user;
 
-          // 1. Loading
           if (vm.state == ProfileState.loading && user == null) {
             return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
           }
 
-          // 2. [CẬP NHẬT] Xử lý Lỗi
           if (vm.state == ProfileState.error && user == null) {
             return Center(
               child: Column(
@@ -93,7 +104,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // 3. Unauthorized
           if (user == null || vm.state == ProfileState.unauthorized) {
             return Center(
               child: Column(
@@ -109,7 +119,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // 4. UI Profile (Giữ nguyên)
           return Stack(
             children: [
               SingleChildScrollView(
@@ -118,7 +127,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Header
                     Container(
                       padding: const EdgeInsets.only(top: 60, bottom: 30, left: 20, right: 20),
-                      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+                      decoration: BoxDecoration(
+                          color: cardColor, // Đổi màu nền Header theo Theme
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+                          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]
+                      ),
                       child: Column(
                         children: [
                           Stack(
@@ -138,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Flexible(child: Text(user.fullName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                            Flexible(child: Text(user.fullName, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor), overflow: TextOverflow.ellipsis)),
                             const SizedBox(width: 8),
                             InkWell(onTap: () => _showEditProfileBottomSheet(context, user, vm), child: const Padding(padding: EdgeInsets.all(4.0), child: Icon(Icons.edit, size: 20, color: kPrimaryColor)))
                           ]),
@@ -149,21 +162,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Menu Sections (Giữ nguyên)
+                    // Menu Sections
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         children: [
-                          _buildMenuSection("Tài khoản", [
-                            _buildMenuItem(Icons.person_outline, "Chỉnh sửa thông tin", () => _showEditProfileBottomSheet(context, user, vm)),
-                            _buildMenuItem(Icons.description_outlined, "Quản lý CV", () => Navigator.pushNamed(context, '/manage_cv')),
-                            _buildMenuItem(Icons.bookmark_border, "Công việc đã lưu", () => Navigator.pushNamed(context, '/save_job')),
+                          _buildMenuSection(context, "Tài khoản", [
+                            _buildMenuItem(context, Icons.person_outline, "Chỉnh sửa thông tin", () => _showEditProfileBottomSheet(context, user, vm)),
+                            _buildMenuItem(context, Icons.description_outlined, "Quản lý CV", () => Navigator.pushNamed(context, '/manage_cv')),
+                            _buildMenuItem(context, Icons.bookmark_border, "Công việc đã lưu", () => Navigator.pushNamed(context, '/save_job')),
                           ]),
                           const SizedBox(height: 20),
-                          _buildMenuSection("Cài đặt", [
-                            _buildMenuItem(Icons.settings_outlined, "Cài đặt chung", () => Navigator.pushNamed(context, '/settings')),
-                            _buildMenuItem(Icons.help_outline, "Trợ giúp & Hỗ trợ", () {}),
-                            _buildMenuItem(Icons.logout, "Đăng xuất", () => vm.logout(context), isDestructive: true),
+                          _buildMenuSection(context, "Cài đặt", [
+                            _buildMenuItem(context, Icons.settings_outlined, "Cài đặt chung", () => Navigator.pushNamed(context, '/settings')),
+                            _buildMenuItem(context, Icons.help_outline, "Trợ giúp & Hỗ trợ", () {}),
+                            _buildMenuItem(context, Icons.logout, "Đăng xuất", () => vm.logout(context), isDestructive: true),
                           ]),
                         ],
                       ),
@@ -180,17 +193,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMenuSection(String title, List<Widget> items) {
+  Widget _buildMenuSection(BuildContext context, String title, List<Widget> items) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(padding: const EdgeInsets.only(left: 8, bottom: 10), child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54))),
-      Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]), child: Column(children: items)),
+      Padding(padding: const EdgeInsets.only(left: 8, bottom: 10), child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey))),
+      Container(
+          decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color, // Màu nền section theo Theme
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]
+          ),
+          child: Column(children: items)
+      ),
     ]);
   }
 
-  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     return ListTile(
       leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: isDestructive ? Colors.red.withOpacity(0.1) : kPrimaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: isDestructive ? Colors.red : kPrimaryColor, size: 20)),
-      title: Text(title, style: TextStyle(fontWeight: FontWeight.w500, color: isDestructive ? Colors.red : Colors.black87)),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.w500, color: isDestructive ? Colors.red : textColor)),
       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
       onTap: onTap,
     );

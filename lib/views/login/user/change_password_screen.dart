@@ -6,7 +6,6 @@ import '../../../view_models/user/change_password_view_model.dart';
 
 // 🔥 Định nghĩa màu chủ đạo
 const Color kPrimaryColor = Color(0xFF6C63FF);
-const Color kBackgroundColor = Color(0xFFF9F9F9);
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -25,13 +24,27 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final vm = context.watch<ChangePasswordViewModel>();
 
+    // 🎨 Lấy thông tin Theme hiện tại
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Màu nền Card/Input: Trắng (Light) - Xám Card (Dark)
+    final cardColor = theme.cardTheme.color ?? Colors.white;
+    // Màu chữ chính: Đen (Light) - Trắng (Dark)
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black87;
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      // Dùng màu nền từ Theme thay vì gán cứng
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text("Đổi mật khẩu", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+            "Đổi mật khẩu",
+            style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.titleLarge?.color)
+        ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black87,
+        // Màu icon back tự động theo Theme
+        foregroundColor: theme.iconTheme.color,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -49,7 +62,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 margin: const EdgeInsets.symmetric(vertical: 20),
                 padding: const EdgeInsets.all(25),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardColor, // Nền icon đổi màu theo theme
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(color: kPrimaryColor.withOpacity(0.15), blurRadius: 25, offset: const Offset(0, 10)),
@@ -58,20 +71,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: const Icon(Icons.security_update_good_outlined, size: 60, color: kPrimaryColor),
               ),
 
-              const Text(
+              Text(
                 "Bảo mật tài khoản",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
               ),
               const SizedBox(height: 8),
               Text(
                 "Mật khẩu mới phải khác với mật khẩu cũ.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    fontSize: 14
+                ),
               ),
               const SizedBox(height: 30),
 
               // 2. Form Fields
+              // ✅ Đã sửa lỗi: context được truyền vào đúng vị trí
               _buildModernPasswordField(
+                context,
                 controller: vm.oldPasswordController,
                 label: "Mật khẩu hiện tại",
                 obscureText: _obscureOld,
@@ -80,6 +98,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 16),
               _buildModernPasswordField(
+                context,
                 controller: vm.newPasswordController,
                 label: "Mật khẩu mới",
                 obscureText: _obscureNew,
@@ -88,6 +107,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 16),
               _buildModernPasswordField(
+                context,
                 controller: vm.confirmPasswordController,
                 label: "Xác nhận mật khẩu mới",
                 obscureText: _obscureConfirm,
@@ -126,16 +146,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   // Widget ô nhập mật khẩu xịn xò
-  Widget _buildModernPasswordField({
-    required TextEditingController controller,
-    required String label,
-    required bool obscureText,
-    required VoidCallback onToggle,
-    String? Function(String?)? validator,
-  }) {
+  // ✅ Đã sửa lỗi: Chuyển context thành positional parameter (không nằm trong {})
+  Widget _buildModernPasswordField(
+      BuildContext context, {
+        required TextEditingController controller,
+        required String label,
+        required bool obscureText,
+        required VoidCallback onToggle,
+        String? Function(String?)? validator,
+      }) {
+    // Lấy theme trong hàm con
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = theme.cardTheme.color ?? Colors.white;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor, // Nền Container đổi màu
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 4)),
@@ -145,10 +172,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         controller: controller,
         obscureText: obscureText,
         validator: validator,
-        style: const TextStyle(fontWeight: FontWeight.w500),
+        // Màu chữ nhập vào
+        style: TextStyle(fontWeight: FontWeight.w500, color: theme.textTheme.bodyLarge?.color),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: Colors.grey[500]),
+          // Màu nhãn (label) điều chỉnh theo chế độ
+          labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[500]),
           prefixIcon: const Icon(Icons.lock_outline_rounded, color: kPrimaryColor),
           suffixIcon: IconButton(
             icon: Icon(
@@ -167,7 +196,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             borderSide: const BorderSide(color: Colors.redAccent, width: 1),
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: cardColor, // Màu nền input field
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         ),
       ),
