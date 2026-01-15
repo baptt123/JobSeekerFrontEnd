@@ -13,7 +13,7 @@ import '../../services/comment_service.dart';
 class JobDetailViewModel extends ChangeNotifier {
   final JobApplicationService _jobApplicationService = JobApplicationService();
   final JobService _jobService = JobService();
-  final CVService _cvService = CVService(); // Đổi tên cho khớp với file service đã tạo trước đó
+  final CVService _cvService = CVService();
   final CommentService _commentService = CommentService();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -59,15 +59,12 @@ class JobDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Giả sử API getDetail nhận ID hoặc Title. Ở đây truyền param vào.
-      // Nếu API cần ID int, bạn cần parse ở UI trước khi truyền hoặc sửa logic service.
       _job = await _jobService.getJobDetail(jobTitleOrId);
 
       if (_job != null) {
         _isApplied = _job!.isApplied ?? false;
         _isSaved = _job!.isSaved ?? false;
 
-        // Gọi song song để tiết kiệm thời gian
         await Future.wait([
           loadComments(_job!.jobId),
           checkLoginStatus(),
@@ -113,10 +110,8 @@ class JobDetailViewModel extends ChangeNotifier {
 
     try {
       await _commentService.postComment(_job!.jobId, content);
-      // Gửi thành công -> Reload list comment
       await loadComments(_job!.jobId);
       return true;
-
     } on DioException catch (e) {
       String msg = "Gửi bình luận thất bại";
       if (e.response?.statusCode == 401) {
@@ -142,9 +137,7 @@ class JobDetailViewModel extends ChangeNotifier {
     _myCvs = [];
     notifyListeners();
     try {
-      final data = await _cvService.getMyCVs(); // Hàm này trả về List<dynamic> từ Service
-      // Map data dynamic sang Entity
-      // Lưu ý: Đảm bảo UserCvEntity có factory fromJson xử lý đúng các trường từ API
+      final data = await _cvService.getMyCVs();
       _myCvs = (data).map((e) => UserCvEntity.fromJson(e)).toList();
     } catch (e) {
       debugPrint("Lỗi lấy CV: $e");
@@ -170,6 +163,7 @@ class JobDetailViewModel extends ChangeNotifier {
         cvId: selectedCvId,
         coverLetter: coverLetter,
       );
+      // Cập nhật trạng thái ngay lập tức -> Nút đổi thành "Hủy ứng tuyển"
       _isApplied = true;
       return true;
     } catch (e) {
@@ -184,7 +178,28 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // 5. Toggle Save
+  // [NEW] 5. Xử lý Hủy ứng tuyển
+  Future<bool> cancelApplication(BuildContext context) async {
+    if (_job == null) return false;
+
+    // Có thể thêm loading state riêng nếu muốn, ở đây làm đơn giản
+    try {
+      await _jobApplicationService.cancelApplication(_job!.jobId);
+
+      // Cập nhật trạng thái ngay lập tức -> Nút đổi thành "Ứng tuyển ngay"
+      _isApplied = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      String errorMsg = e.toString().replaceAll("Exception: ", "");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
+      }
+      return false;
+    }
+  }
+
+  // 6. Toggle Save
   Future<void> toggleSaveJob(BuildContext context) async {
     if (_isSaving || _job == null) return;
     _isSaving = true;
@@ -199,7 +214,7 @@ class JobDetailViewModel extends ChangeNotifier {
         await _jobService.unsaveJob(_job!.jobId);
       }
     } catch (e) {
-      _isSaved = originalState; // Revert nếu lỗi
+      _isSaved = originalState;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lỗi thao tác"), backgroundColor: Colors.red));
     } finally {
       _isSaving = false;

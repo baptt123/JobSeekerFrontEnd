@@ -15,13 +15,14 @@ class CvGenerationViewModel extends ChangeNotifier {
   // Helper lưu file PDF vào thư mục tạm
   Future<File> _saveBytesToTempFile(List<int> bytes, String prefix) async {
     final tempDir = await getTemporaryDirectory();
+    // Thêm timestamp để tên file không bị trùng
     final fileName = '${prefix}_${DateTime.now().millisecondsSinceEpoch}.pdf';
     final file = File('${tempDir.path}/$fileName');
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
 
-  // Tạo CV AI (Giữ nguyên)
+  // Tạo CV AI (Logic cho Gemini)
   Future<File?> generateCvByAi(String prompt) async {
     if (prompt.isEmpty) {
       _errorMessage = "Vui lòng nhập mô tả bản thân.";
@@ -34,8 +35,12 @@ class CvGenerationViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Gọi service lấy bytes từ Gemini API
       List<int> pdfBytes = await _cvService.generateCVAI(prompt);
+
       if (pdfBytes.length < 100) throw Exception("File PDF bị lỗi hoặc rỗng.");
+
+      // Lưu thành file tạm và trả về File object cho View
       File file = await _saveBytesToTempFile(pdfBytes, "cv_ai");
       return file;
     } catch (e) {
@@ -47,7 +52,7 @@ class CvGenerationViewModel extends ChangeNotifier {
     }
   }
 
-  // Tạo CV Template (Logic Mới)
+  // Tạo CV Template (Logic Template)
   Future<File?> generateCvFromTemplate(int templateId, Map<String, dynamic> data) async {
     _isLoading = true;
     _errorMessage = null;

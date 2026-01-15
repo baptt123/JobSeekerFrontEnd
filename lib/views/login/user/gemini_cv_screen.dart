@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../../../services/cv_service.dart';
+import '../../../utils/app_colors.dart'; // Import AppColors
 import 'cv_preview_screen.dart';
 
 class GeminiCvScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
       showDialog(
           context: context,
           builder: (_) => AlertDialog(
+            backgroundColor: Theme.of(context).cardColor,
             title: const Text("Rất tiếc 😓"),
             content: Text("Có lỗi xảy ra: ${e.toString().replaceAll('Exception:', '')}"),
             actions: [
@@ -65,16 +67,19 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Màu text tiêu đề
+    // Xác định chế độ tối/sáng
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final titleColor = isDark ? Colors.blueAccent[100] : Colors.blue[900];
+
+    // Màu chữ tiêu đề dựa trên chế độ
+    final titleColor = isDark ? Colors.white : AppColors.primary;
 
     return Scaffold(
-      // BỎ backgroundColor cứng
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       appBar: AppBar(
-        title: const Text("Tạo CV AI Thông Minh"),
-        backgroundColor: Colors.blueAccent,
+        title: const Text("Tạo CV AI Thông Minh", style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.primary, // [UPDATE] Màu Tím
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
@@ -83,8 +88,8 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(
-                  child: Icon(Icons.auto_awesome, size: 60, color: Colors.amber),
+                Center(
+                  child: Icon(Icons.auto_awesome, size: 60, color: AppColors.accent), // [UPDATE] Màu Tím nhạt/Accent
                 ),
                 const SizedBox(height: 15),
                 Text(
@@ -102,14 +107,16 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
 
                 // Input Card
                 Card(
-                  elevation: 2,
+                  elevation: 4,
+                  shadowColor: AppColors.primary.withOpacity(0.2), // [UPDATE] Shadow tím
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  color: Theme.of(context).cardTheme.color, // Tự động đổi màu
+                  color: isDark ? AppColors.cardDark : Colors.white, // Màu Card theo theme
                   child: Padding(
                     padding: const EdgeInsets.all(5.0),
                     child: TextField(
                       controller: _promptController,
                       maxLines: 8,
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.all(15),
@@ -129,7 +136,8 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
                     icon: const Icon(Icons.star),
                     label: const Text("Tạo CV Ngay", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: AppColors.primary, // [UPDATE] Màu Tím
+                      foregroundColor: Colors.white,      // [UPDATE] Chữ trắng để dễ đọc
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
                   ),
@@ -141,14 +149,14 @@ class _GeminiCvScreenState extends State<GeminiCvScreen> {
           // Loading Overlay
           if (_isLoading)
             Container(
-              color: Colors.black45,
-              child: const Center(
+              color: Colors.black54,
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 20),
-                    Text(
+                    CircularProgressIndicator(color: AppColors.accent), // [UPDATE] Màu loading tím
+                    const SizedBox(height: 20),
+                    const Text(
                       "Đang phân tích & thiết kế...",
                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
                     )

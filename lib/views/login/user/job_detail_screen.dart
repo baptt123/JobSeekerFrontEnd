@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/job-entity.dart';
 import '../../../view_models/user/job_detail_view_model.dart';
-import '../../../services/job_application_service.dart'; // Import service
 import 'company_detail_screen.dart';
 import '../../../widget/user/job/comment_section.dart';
 
@@ -59,8 +58,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
-  // [NEW] Dialog xác nhận hủy ứng tuyển
-  void _showCancelConfirmation(BuildContext context, int jobId, JobDetailViewModel vm) {
+  // [UPDATED] Dialog xác nhận hủy ứng tuyển sử dụng ViewModel để cập nhật State
+  void _showCancelConfirmation(BuildContext context, JobDetailViewModel vm) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -73,26 +72,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(ctx); // Đóng dialog
-              try {
-                // Gọi service hủy
-                await JobApplicationService().cancelApplication(jobId);
-                // Thông báo thành công
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Đã hủy ứng tuyển thành công")),
-                  );
-                  // Refresh lại trạng thái trong ViewModel để UI cập nhật
-                  // Giả sử ViewModel có hàm refresh hoặc set lại isApplied = false
-                  // Nếu không có, bạn cần thêm vào VM. Tạm thời gọi lại fetchJobDetail
-                  vm.fetchJobDetail(widget.jobTitle);
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Lỗi: ${e.toString().replaceAll('Exception: ', '')}")),
-                  );
-                }
+              Navigator.pop(ctx); // Đóng dialog trước
+
+              // Gọi ViewModel để hủy và update state
+              final success = await vm.cancelApplication(context);
+
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Đã hủy ứng tuyển thành công")),
+                );
+                // Lúc này vm.isApplied đã là false -> UI tự đổi nút
               }
             },
             child: const Text("Có, hủy ngay", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
@@ -127,7 +116,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                     leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
                     actions: [
                       IconButton(icon: Icon(vm.isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.white), onPressed: () => vm.toggleSaveJob(context)),
-                      IconButton(icon: const Icon(Icons.share, color: Colors.white), onPressed: () {}),
+                      // IconButton(icon: const Icon(Icons.share, color: Colors.white), onPressed: () {}),
                     ],
                     flexibleSpace: FlexibleSpaceBar(background: _buildHeaderContent(job)),
                   ),
@@ -175,20 +164,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
               ),
               const SizedBox(height: 12),
               Text(job.title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              InkWell(
-                onTap: () => _navigateToCompany(context, job),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(child: Text(job.company?.name ?? "Công ty ẩn danh", style: const TextStyle(color: Colors.white70, fontSize: 14, decoration: TextDecoration.underline), maxLines: 1)),
-                      const SizedBox(width: 4), const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white70)
-                    ],
-                  ),
-                ),
-              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -232,13 +208,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             Wrap(spacing: 8, runSpacing: 8, children: displayTags.map((tag) => Chip(backgroundColor: kPrimaryColor.withOpacity(0.05), side: const BorderSide(color: kPrimaryColor), label: Text(tag, style: const TextStyle(color: kPrimaryColor)))).toList()),
           ],
           const SizedBox(height: 24),
-
-          // Tích hợp CommentSection
           ChangeNotifierProvider.value(
             value: vm,
             child: CommentSection(jobId: job.jobId),
           ),
-
           const SizedBox(height: 80),
         ],
       ),
@@ -282,7 +255,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20, color: kPrimaryColor), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)), const SizedBox(height: 2), Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))]))]);
   }
 
-  // [UPDATED] Hàm dựng Bottom Action có thêm nút Hủy
+  // [UPDATED] Xử lý hiển thị nút dựa trên trạng thái trong ViewModel
   Widget _buildBottomAction(BuildContext context, JobDetailViewModel vm, JobEntity job) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -293,17 +266,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             const SizedBox(width: 16),
             Expanded(
               child: vm.isApplied
-              // Nếu đã ứng tuyển -> Hiển thị nút Hủy (Màu đỏ)
+              // Nếu Đã ứng tuyển -> Hiển thị nút Hủy (Đỏ) và gọi dialog xác nhận
                   ? ElevatedButton(
-                  onPressed: () => _showCancelConfirmation(context, job.jobId, vm),
+                  onPressed: () => _showCancelConfirmation(context, vm),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent, // Màu đỏ cho hành động hủy
+                      backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                   ),
                   child: const Text("Hủy ứng tuyển", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
               )
-              // Nếu chưa ứng tuyển -> Hiển thị nút Ứng tuyển ngay (Màu tím)
+              // Nếu Chưa ứng tuyển -> Hiển thị nút Ứng tuyển ngay (Tím)
                   : ElevatedButton(
                   onPressed: () => _showApplyBottomSheet(context, vm),
                   style: ElevatedButton.styleFrom(
@@ -357,7 +330,6 @@ class _ApplyJobFormState extends State<ApplyJobForm> {
   Widget build(BuildContext context) {
     final vm = context.watch<JobDetailViewModel>();
 
-    // Auto select default CV
     if (!vm.isLoadingCvs && vm.myCvs.isNotEmpty && _selectedCvId == null) {
       Future.microtask(() {
         if (mounted) {

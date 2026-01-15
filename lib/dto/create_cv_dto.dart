@@ -1,10 +1,11 @@
-// lib/dto/create_cv_dto.dart (Cập nhật đầy đủ)
+// lib/dto/create_cv_dto.dart
 import 'education_dto.dart';
 import 'experience_dto.dart';
 import 'skill_dto.dart';
 
 class CreateCvDto {
   final String fullName;
+  final String? avatarUrl; // Thêm trường này
   final String jobTitle;
   final String email;
   final String phone;
@@ -16,6 +17,7 @@ class CreateCvDto {
 
   CreateCvDto({
     required this.fullName,
+    this.avatarUrl,
     required this.jobTitle,
     required this.email,
     required this.phone,
@@ -28,6 +30,7 @@ class CreateCvDto {
 
   Map<String, dynamic> toJson() => {
     'fullName': fullName,
+    'avatarUrl': avatarUrl, // Gửi lên backend
     'jobTitle': jobTitle,
     'email': email,
     'phone': phone,

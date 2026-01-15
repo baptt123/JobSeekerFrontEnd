@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data'; // Để xử lý Uint8List
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart'; // Thư viện in ấn
+import 'package:pdf/pdf.dart'; // [QUAN TRỌNG] Thêm dòng này để sửa lỗi PdfPageFormat
 
 class CvPreviewScreen extends StatefulWidget {
   // Nhận path (local) hoặc url (online)
@@ -32,7 +35,7 @@ class _CvPreviewScreenState extends State<CvPreviewScreen> {
   Future<void> _processInputPath() async {
     final path = widget.localPath;
     if (path.startsWith('http')) {
-      // [YÊU CẦU 3] Xử lý hiển thị CV từ Cloudinary URL
+      // Xử lý hiển thị CV từ Cloudinary URL
       try {
         final downloadedFile = await _downloadFile(path);
         setState(() {
@@ -65,11 +68,33 @@ class _CvPreviewScreenState extends State<CvPreviewScreen> {
     return savePath;
   }
 
-  void _downloadOrShare() {
+  // Hàm Share cũ (cho nút trên AppBar)
+  void _shareFile() {
     if (localFilePath != null) {
       Share.shareXFiles(
         [XFile(localFilePath!)],
         text: 'CV của tôi (Tạo bởi TechConnect)',
+      );
+    }
+  }
+
+  // [MỚI] Hàm xử lý Tải về / In ấn thông qua thư viện Printing
+  Future<void> _printCv() async {
+    if (localFilePath == null) return;
+
+    try {
+      // Đọc file local thành bytes
+      final file = File(localFilePath!);
+      final Uint8List bytes = await file.readAsBytes();
+
+      // Gọi giao diện in của hệ thống (cho phép lưu PDF hoặc In)
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => bytes,
+        name: 'TechConnect_CV.pdf', // Tên file mặc định khi lưu
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi khi mở trình in ấn: $e")),
       );
     }
   }
@@ -84,8 +109,8 @@ class _CvPreviewScreenState extends State<CvPreviewScreen> {
           if (localFilePath != null)
             IconButton(
               icon: const Icon(Icons.share),
-              onPressed: _downloadOrShare,
-              tooltip: "Tải về hoặc Chia sẻ",
+              onPressed: _shareFile,
+              tooltip: "Chia sẻ",
             )
         ],
       ),
@@ -127,9 +152,9 @@ class _CvPreviewScreenState extends State<CvPreviewScreen> {
         ],
       ),
       floatingActionButton: (!isLoading && localFilePath != null) ? FloatingActionButton.extended(
-        onPressed: _downloadOrShare,
-        icon: const Icon(Icons.download),
-        label: const Text("Tải CV về máy"),
+        onPressed: _printCv,
+        icon: const Icon(Icons.print),
+        label: const Text("Tải về / In CV"),
         backgroundColor: Colors.green,
       ) : null,
     );
