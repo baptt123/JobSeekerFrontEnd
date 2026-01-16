@@ -8,7 +8,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:job_seeker_frontend/services/local_notification_service.dart';
 import 'package:job_seeker_frontend/services/user_service.dart';
 import 'package:job_seeker_frontend/utils/global_keys.dart';
-import 'package:job_seeker_frontend/views/login/user/job_detail_screen.dart';
+// [THÊM MỚI] Import trang thông báo
+import 'package:job_seeker_frontend/views/login/user/notification_screen.dart';
 
 class FirebaseMessagingService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -42,12 +43,8 @@ class FirebaseMessagingService {
     });
   }
 
-  // 2. 🔥 HÀM HỎI QUYỀN MẶC ĐỊNH (Sửa lại theo yêu cầu)
-  // Xóa bỏ dialog custom, dùng dialog chuẩn của Firebase/OS
+  // 2. 🔥 HÀM HỎI QUYỀN MẶC ĐỊNH
   Future<void> forceRequestPermission(BuildContext context) async {
-    // Gọi hàm requestPermission của Firebase.
-    // Hàm này tự động xử lý việc hiển thị Dialog hệ thống trên iOS và Android 13+.
-    // Nếu user đã chọn trước đó, nó sẽ trả về trạng thái ngay mà không hiện lại popup.
     NotificationSettings settings = await _firebaseMessaging.requestPermission(
       alert: true,
       badge: true,
@@ -60,11 +57,9 @@ class FirebaseMessagingService {
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print("✅ Người dùng ĐỒNG Ý nhận thông báo.");
-      // Chỉ khi đồng ý mới lấy token và gửi lên server
       await _setupNotificationAfterAgreement();
     } else {
       print("❌ Người dùng TỪ CHỐI hoặc chưa cấp quyền.");
-      // Nếu từ chối, xóa token trên server để không gửi thông báo
       await _userService.updateFcmToken(null);
       await _firebaseMessaging.unsubscribeFromTopic('job_alerts');
     }
@@ -88,24 +83,20 @@ class FirebaseMessagingService {
     await _firebaseMessaging.unsubscribeFromTopic('user_$userId');
   }
 
+  // [CHỈNH SỬA] Hàm xử lý click: Luôn trỏ về NotificationScreen
   void _handleNotificationClick(Map<String, dynamic> data) {
     final navigator = ManagingGlobalKey.navigatorKey.currentState;
     if (navigator == null) return;
 
-    final String type = data['type']?.toString() ?? '';
-    if (type == 'CHAT_MSG' || data['click_action'] == 'CHAT_DETAIL') {
-      final otherUserIdStr = data['senderId'] ?? data['other_user_id'];
-      if (otherUserIdStr != null) {
-        // Logic điều hướng chat (giữ nguyên)
-      }
-    } else if (type == 'NEW_JOB_POST' || type == 'APPLICATION_UPDATE') {
-      if (data['job_title'] != null) {
-        navigator.push(
-          MaterialPageRoute(
-            builder: (context) => JobDetailScreen(jobTitle: data['job_title']),
-          ),
-        );
-      }
-    }
+    // Logic cũ: Kiểm tra type để điều hướng (đã comment lại hoặc bỏ qua)
+    // final String type = data['type']?.toString() ?? '';
+
+    // Logic mới: Bắt buộc vào trang thông báo bất kể chủ đề gì
+    print("🔔 Notification Clicked: Navigating to NotificationScreen");
+    navigator.push(
+      MaterialPageRoute(
+        builder: (context) => const NotificationScreen(),
+      ),
+    );
   }
 }

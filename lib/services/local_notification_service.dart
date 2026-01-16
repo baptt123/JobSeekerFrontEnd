@@ -1,6 +1,9 @@
 // lib/services/local_notification_service.dart
 
+import 'package:flutter/material.dart'; // [THÊM MỚI] Cần thiết cho MaterialPageRoute
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:job_seeker_frontend/utils/global_keys.dart'; // [THÊM MỚI] Để dùng navigatorKey
+import 'package:job_seeker_frontend/views/login/user/notification_screen.dart'; // [THÊM MỚI] Import trang thông báo
 
 class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -19,7 +22,6 @@ class LocalNotificationService {
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
-      // onDidReceiveLocalNotification đã bị loại bỏ trong phiên bản mới
     );
 
     const InitializationSettings initSettings = InitializationSettings(
@@ -71,9 +73,21 @@ class LocalNotificationService {
     );
   }
 
-  /// Xử lý khi nhấn thông báo
+  /// Xử lý khi nhấn thông báo (Foreground)
+  // [CHỈNH SỬA] Thêm logic điều hướng vào đây
   static void _onDidReceiveNotificationResponse(NotificationResponse response) {
-    print('Nhấn nào notification: ${response.payload}');
-    // TODO: Điều hướng dựa trên response.payload
+    print('Nhấn vào local notification: ${response.payload}');
+
+    // Sử dụng Global Key để điều hướng không cần context
+    final navigator = ManagingGlobalKey.navigatorKey.currentState;
+
+    if (navigator != null) {
+      // Bắt buộc vào trang thông báo
+      navigator.push(
+        MaterialPageRoute(
+          builder: (context) => const NotificationScreen(),
+        ),
+      );
+    }
   }
 }

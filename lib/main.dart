@@ -11,7 +11,6 @@ import 'package:job_seeker_frontend/services/firebase_messaging_service.dart';
 
 // Import ViewModels
 import 'package:job_seeker_frontend/view_models/user/change_password_view_model.dart';
-import 'package:job_seeker_frontend/view_models/user/conversation_list_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/cv_generation_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/forgot_password_view_model.dart';
 import 'package:job_seeker_frontend/view_models/user/home_view_model.dart';
@@ -61,7 +60,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => CvGenerationViewModel()),
         ChangeNotifierProvider(create: (_) => JobDetailViewModel()),
         ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
-        ChangeNotifierProvider(create: (_) => ConversationListViewModel()),
         ChangeNotifierProvider(create: (_) => NotificationViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => ThemeViewModel()),
