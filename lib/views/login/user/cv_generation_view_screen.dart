@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'package:image_picker/image_picker.dart'; // Import Image Picker
 import '../../../view_models/user/cv_generation_view_model.dart';
-import '../../../utils/app_colors.dart'; // Import AppColors của dự án
+import '../../../view_models/user/user_profile_view_model.dart'; // Để lấy info user
+import '../../../utils/app_colors.dart';
 import 'cv_preview_screen.dart';
 
 class CvGenerationViewScreen extends StatefulWidget {
@@ -19,6 +21,7 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
   final _personalInfoKey = GlobalKey<FormState>();
   final _skillsKey = GlobalKey<FormState>();
 
+  // Controllers thông tin cá nhân
   final _nameController = TextEditingController();
   final _jobTitleController = TextEditingController();
   final _emailController = TextEditingController();
@@ -26,9 +29,7 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
   final _addressController = TextEditingController();
   final _summaryController = TextEditingController();
 
-  // [MỚI] Controller cho Link Ảnh
-  final _avatarUrlController = TextEditingController();
-
+  // Controllers chi tiết
   final _skillController = TextEditingController();
   final _expCompanyController = TextEditingController();
   final _expJobController = TextEditingController();
@@ -40,10 +41,25 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
 
   final TextEditingController _aiPromptController = TextEditingController();
 
+  // [MỚI] State quản lý hình ảnh
+  File? _selectedImageFile; // Ảnh chọn từ máy
+  bool _useProfileImage = false; // Checkbox dùng ảnh profile
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Tự động điền thông tin từ User Profile nếu có
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userVM = Provider.of<ProfileViewModel>(context, listen: false);
+      if(userVM.user != null) {
+        _nameController.text = userVM.user!.fullName;
+        _emailController.text = userVM.user!.email;
+        if(userVM.user!.phone != null) _phoneController.text = userVM.user!.phone!;
+        if(userVM.user!.city != null) _addressController.text = userVM.user!.city!;
+      }
+    });
   }
 
   @override
@@ -55,7 +71,6 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
     _phoneController.dispose();
     _addressController.dispose();
     _summaryController.dispose();
-    _avatarUrlController.dispose();
     _skillController.dispose();
     _expCompanyController.dispose();
     _expJobController.dispose();
@@ -68,7 +83,26 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
     super.dispose();
   }
 
+  // [MỚI] Hàm mở thư viện chọn ảnh
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImageFile = File(image.path);
+        _useProfileImage = false; // Tắt chế độ dùng ảnh profile nếu chọn ảnh mới
+      });
+    }
+  }
+
   void _submitTemplate(CvGenerationViewModel viewModel) async {
+    // Xác định nguồn ảnh (URL profile hoặc File đã chọn)
+    String? profileAvatarUrl;
+    if (_useProfileImage) {
+      final userVM = Provider.of<ProfileViewModel>(context, listen: false);
+      profileAvatarUrl = userVM.user?.avatarUrl;
+    }
+
     Map<String, dynamic> cvData = {
       "fullName": _nameController.text.trim(),
       "jobTitle": _jobTitleController.text.trim(),
@@ -76,8 +110,6 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
       "phone": _phoneController.text.trim(),
       "address": _addressController.text.trim(),
       "summary": _summaryController.text.trim(),
-      // [MỚI] Gửi link ảnh
-      "avatarUrl": _avatarUrlController.text.trim(),
 
       "skills": _skillController.text.isNotEmpty
           ? _skillController.text.split(',').map((e) => {"name": e.trim()}).toList()
@@ -103,7 +135,13 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
       ]
     };
 
-    File? pdfFile = await viewModel.generateCvFromTemplate(_selectedTemplateId, cvData);
+    // Gọi ViewModel, truyền thêm file ảnh hoặc URL
+    File? pdfFile = await viewModel.generateCvFromTemplate(
+      _selectedTemplateId,
+      cvData,
+      localImageFile: _selectedImageFile,
+      onlineImageUrl: profileAvatarUrl,
+    );
 
     if (pdfFile != null) {
       if (!mounted) return;
@@ -128,7 +166,7 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: required ? "$label (*)" : label,
-          prefixIcon: Icon(icon, color: AppColors.primary), // Màu Tím
+          prefixIcon: Icon(icon, color: AppColors.primary),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           filled: true,
           fillColor: Colors.white,
@@ -172,14 +210,6 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
     );
   }
 
-  // Giả lập lấy ảnh từ Gemini
-  void _fetchImageFromGemini() {
-    setState(() {
-      _avatarUrlController.text = "[https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg](https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg)";
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Đã lấy ảnh mẫu từ Gemini!")));
-  }
-
   List<Step> _getSteps(CvGenerationViewModel viewModel) {
     return [
       Step(
@@ -191,8 +221,16 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildTemplateOption(1, "Cổ Điển", Colors.grey[200]!),
-                _buildTemplateOption(2, "Sáng Tạo", Colors.deepPurple[50]!), // Tím nhạt
+                _buildTemplateOption(1, "Modern", Colors.blue[50]!),
+                _buildTemplateOption(2, "Classic", Colors.grey[200]!),
+              ],
+            ),
+            SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildTemplateOption(3, "Professional", Colors.indigo[50]!),
+                _buildTemplateOption(4, "Creative", Colors.teal[50]!),
               ],
             ),
             SizedBox(height: 20),
@@ -207,18 +245,84 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
           key: _personalInfoKey,
           child: Column(
             children: [
-              // Phần Nhập Avatar
-              Row(
-                children: [
-                  Expanded(child: _buildTextField(_avatarUrlController, "Link Ảnh (URL)", Icons.image)),
-                  SizedBox(width: 10),
-                  IconButton(
-                    icon: Icon(Icons.auto_awesome, color: AppColors.accent),
-                    onPressed: _fetchImageFromGemini,
-                    tooltip: "Dùng Gemini tìm ảnh",
-                  )
-                ],
+              // [MỚI] Widget Chọn Ảnh Đại Diện
+              Container(
+                margin: EdgeInsets.only(bottom: 20),
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(10)
+                ),
+                child: Row(
+                  children: [
+                    // Preview ảnh
+                    Container(
+                      width: 70, height: 70,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey[200],
+                          image: _selectedImageFile != null
+                              ? DecorationImage(image: FileImage(_selectedImageFile!), fit: BoxFit.cover)
+                              : (_useProfileImage
+                              ? DecorationImage(image: NetworkImage(Provider.of<ProfileViewModel>(context).user?.avatarUrl ?? ""), fit: BoxFit.cover)
+                              : null)
+                      ),
+                      child: (_selectedImageFile == null && !_useProfileImage)
+                          ? Icon(Icons.person, size: 40, color: Colors.grey)
+                          : null,
+                    ),
+                    SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Ảnh đại diện (Tùy chọn)", style: TextStyle(fontWeight: FontWeight.bold)),
+                          SizedBox(height: 5),
+                          Row(
+                            children: [
+                              TextButton.icon(
+                                onPressed: _pickImage,
+                                icon: Icon(Icons.photo_library, size: 16),
+                                label: Text("Thư viện"),
+                                style: TextButton.styleFrom(padding: EdgeInsets.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                              ),
+                              SizedBox(width: 15),
+                              // Nút Checkbox dùng ảnh profile
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _useProfileImage = !_useProfileImage;
+                                    if(_useProfileImage) _selectedImageFile = null;
+                                  });
+                                },
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 24, height: 24,
+                                      child: Checkbox(
+                                          value: _useProfileImage,
+                                          onChanged: (val) {
+                                            setState(() {
+                                              _useProfileImage = val!;
+                                              if(_useProfileImage) _selectedImageFile = null;
+                                            });
+                                          }
+                                      ),
+                                    ),
+                                    SizedBox(width: 5),
+                                    Text("Ảnh hồ sơ"),
+                                  ],
+                                ),
+                              )
+                            ],
+                          )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
               ),
+
               _buildTextField(_nameController, "Họ và tên", Icons.person, required: true),
               _buildTextField(_jobTitleController, "Vị trí ứng tuyển", Icons.work, required: true),
               _buildTextField(_emailController, "Email", Icons.email, required: true),
@@ -244,7 +348,6 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
 
               Divider(color: AppColors.primary),
 
-              // [MỚI] Phần Học vấn làm rõ ràng hơn
               Text("Học Vấn & Bằng Cấp", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16)),
               SizedBox(height: 10),
               Container(
@@ -298,7 +401,7 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
         backgroundColor: Colors.white,
         appBar: AppBar(
           title: Text("Tạo CV Chuyên Nghiệp"),
-          backgroundColor: AppColors.primary, // Màu Tím
+          backgroundColor: AppColors.primary,
           bottom: TabBar(
             controller: _tabController,
             indicatorColor: AppColors.accent,
@@ -320,7 +423,7 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
                 // TAB 1: STEPPER
                 Theme(
                   data: ThemeData(
-                    colorScheme: ColorScheme.light(primary: AppColors.primary), // Stepper màu Tím
+                    colorScheme: ColorScheme.light(primary: AppColors.primary),
                   ),
                   child: Stepper(
                     type: StepperType.horizontal,
@@ -371,7 +474,7 @@ class _CvGenerationViewScreenState extends State<CvGenerationViewScreen> with Si
                   ),
                 ),
 
-                // TAB 2: GEMINI PROMPT
+                // TAB 2: GEMINI PROMPT (Giữ nguyên)
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(

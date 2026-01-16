@@ -4,38 +4,39 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../dto/create_cv_dto.dart';
 
-class PdfTemplateBuilderService{
+class PdfTemplateBuilderService {
 
-  Future<Uint8List> buildPdf(CreateCvDto data, {String templateId = 'modern'}) async {
+  /// Hàm tạo PDF chính
+  /// [avatarBytes]: Dữ liệu ảnh đại diện (nếu có)
+  Future<Uint8List> buildPdf(CreateCvDto data, {String templateId = 'modern', Uint8List? avatarBytes}) async {
     final pdf = pw.Document();
 
-    // 1. Tải Font chữ & Font Icon (Quan trọng để không bị lỗi ô vuông)
+    // 1. Tải Font chữ & Font Icon
     final fontRegular = await PdfGoogleFonts.robotoRegular();
     final fontBold = await PdfGoogleFonts.robotoBold();
     final fontItalic = await PdfGoogleFonts.robotoItalic();
-    final fontIcons = await PdfGoogleFonts.materialIcons(); // Tải font icon
+    final fontIcons = await PdfGoogleFonts.materialIcons();
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        // 2. Cấu hình Theme: Thêm fontIcons vào đây
         theme: pw.ThemeData.withFont(
           base: fontRegular,
           bold: fontBold,
           italic: fontItalic,
-          icons: fontIcons, // Đăng ký font icon
+          icons: fontIcons,
         ),
         build: (pw.Context context) {
           switch (templateId) {
             case 'classic':
-              return _buildClassicTemplate(data);
+              return _buildClassicTemplate(data, avatarBytes);
             case 'professional':
-              return _buildProfessionalTemplate(data);
+              return _buildProfessionalTemplate(data, avatarBytes);
             case 'creative':
-              return _buildCreativeTemplate(data);
+              return _buildCreativeTemplate(data, avatarBytes);
             case 'modern':
             default:
-              return _buildModernTemplate(data);
+              return _buildModernTemplate(data, avatarBytes);
           }
         },
       ),
@@ -47,7 +48,7 @@ class PdfTemplateBuilderService{
   // ==========================================
   // 1. MODERN TEMPLATE
   // ==========================================
-  pw.Widget _buildModernTemplate(CreateCvDto data) {
+  pw.Widget _buildModernTemplate(CreateCvDto data, Uint8List? avatarBytes) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -59,10 +60,9 @@ class PdfTemplateBuilderService{
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _buildAvatarPlaceholder(),
+                pw.Center(child: _buildAvatarImage(avatarBytes, size: 80)),
                 pw.SizedBox(height: 20),
                 _buildSectionTitle("LIÊN HỆ", color: PdfColors.blue800),
-                // XÓA const ở đây để tránh lỗi
                 _buildInfoRow(data.email, icon: const pw.IconData(0xe158)), // email
                 _buildInfoRow(data.phone, icon: const pw.IconData(0xe0b0)), // phone
                 _buildInfoRow(data.address, icon: const pw.IconData(0xe0c8)), // location
@@ -105,10 +105,13 @@ class PdfTemplateBuilderService{
   // ==========================================
   // 2. CLASSIC TEMPLATE
   // ==========================================
-  pw.Widget _buildClassicTemplate(CreateCvDto data) {
+  pw.Widget _buildClassicTemplate(CreateCvDto data, Uint8List? avatarBytes) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
+        if (avatarBytes != null)
+          pw.Center(child: pw.Container(margin: const pw.EdgeInsets.only(bottom: 10), child: _buildAvatarImage(avatarBytes, size: 70))),
+
         pw.Center(child: pw.Text(data.fullName.toUpperCase(), style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold))),
         pw.SizedBox(height: 5),
         pw.Center(child: pw.Text(data.jobTitle, style: pw.TextStyle(fontSize: 16, fontStyle: pw.FontStyle.italic))),
@@ -155,25 +158,37 @@ class PdfTemplateBuilderService{
   // ==========================================
   // 3. PROFESSIONAL TEMPLATE
   // ==========================================
-  pw.Widget _buildProfessionalTemplate(CreateCvDto data) {
+  pw.Widget _buildProfessionalTemplate(CreateCvDto data, Uint8List? avatarBytes) {
     return pw.Column(
         children: [
           pw.Container(
               color: PdfColors.indigo900,
               padding: const pw.EdgeInsets.all(20),
               width: double.infinity,
-              child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+              child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    pw.Text(data.fullName, style: pw.TextStyle(fontSize: 30, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                    pw.Text(data.jobTitle.toUpperCase(), style: pw.TextStyle(fontSize: 14, color: PdfColors.indigo100, letterSpacing: 2)),
-                    pw.SizedBox(height: 10),
-                    pw.Row(
-                        children: [
-                          pw.Text(data.email, style: const pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-                          pw.SizedBox(width: 20),
-                          pw.Text(data.phone, style: const pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-                        ]
+                    if (avatarBytes != null)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.only(right: 20),
+                        child: _buildAvatarImage(avatarBytes, size: 70, borderColor: PdfColors.white),
+                      ),
+                    pw.Expanded(
+                      child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(data.fullName, style: pw.TextStyle(fontSize: 30, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                            pw.Text(data.jobTitle.toUpperCase(), style: pw.TextStyle(fontSize: 14, color: PdfColors.indigo100, letterSpacing: 2)),
+                            pw.SizedBox(height: 10),
+                            pw.Row(
+                                children: [
+                                  pw.Text(data.email, style: const pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+                                  pw.SizedBox(width: 20),
+                                  pw.Text(data.phone, style: const pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+                                ]
+                            )
+                          ]
+                      ),
                     )
                   ]
               )
@@ -238,7 +253,7 @@ class PdfTemplateBuilderService{
   // ==========================================
   // 4. CREATIVE TEMPLATE
   // ==========================================
-  pw.Widget _buildCreativeTemplate(CreateCvDto data) {
+  pw.Widget _buildCreativeTemplate(CreateCvDto data, Uint8List? avatarBytes) {
     return pw.Row(
         children: [
           pw.Expanded(
@@ -256,7 +271,6 @@ class PdfTemplateBuilderService{
                         _buildSectionTitle("KINH NGHIỆM", color: PdfColors.teal900),
                         ...data.experiences.map((e) => pw.Container(
                             margin: const pw.EdgeInsets.only(bottom: 15),
-                            // XÓA const ở đây
                             decoration: pw.BoxDecoration(
                                 border: pw.Border(left: pw.BorderSide(color: PdfColors.teal, width: 2))
                             ),
@@ -279,6 +293,9 @@ class PdfTemplateBuilderService{
                   child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
+                        if(avatarBytes != null)
+                          pw.Center(child: pw.Padding(padding:const pw.EdgeInsets.only(bottom: 20), child: _buildAvatarImage(avatarBytes))),
+
                         _buildSectionTitle("LIÊN HỆ", color: PdfColors.teal900),
                         pw.Text(data.email, style: const pw.TextStyle(fontSize: 10)),
                         pw.Text(data.phone, style: const pw.TextStyle(fontSize: 10)),
@@ -311,7 +328,6 @@ class PdfTemplateBuilderService{
     );
   }
 
-  // ĐÃ SỬA: Hiển thị Icon nếu có
   pw.Widget _buildInfoRow(String text, {pw.IconData? icon}) {
     return pw.Container(
         margin: const pw.EdgeInsets.only(bottom: 5),
@@ -349,7 +365,28 @@ class PdfTemplateBuilderService{
     ]));
   }
 
-  pw.Widget _buildAvatarPlaceholder() {
-    return pw.Container(width: 60, height: 60, decoration: const pw.BoxDecoration(color: PdfColors.grey300, shape: pw.BoxShape.circle), child: pw.Center(child: pw.Text("IMG")));
+  /// [MỚI] Helper: Widget hiển thị avatar từ bytes
+  pw.Widget _buildAvatarImage(Uint8List? imageBytes, {double size = 60, PdfColor borderColor = PdfColors.grey300}) {
+    if (imageBytes != null && imageBytes.isNotEmpty) {
+      return pw.Container(
+        width: size,
+        height: size,
+        decoration: pw.BoxDecoration(
+          shape: pw.BoxShape.circle,
+          border: pw.Border.all(color: borderColor, width: 2),
+          image: pw.DecorationImage(
+            image: pw.MemoryImage(imageBytes),
+            fit: pw.BoxFit.cover,
+          ),
+        ),
+      );
+    }
+    // Fallback: Placeholder khi không có ảnh
+    return pw.Container(
+      width: size,
+      height: size,
+      decoration: pw.BoxDecoration(color: PdfColors.grey300, shape: pw.BoxShape.circle),
+      child: pw.Center(child: pw.Text("IMG", style: pw.TextStyle(fontSize: 10))),
+    );
   }
 }
