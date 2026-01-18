@@ -5,6 +5,13 @@ class JobCard extends StatelessWidget {
   final JobEntity job;
   const JobCard({Key? key, required this.job}) : super(key: key);
 
+  // [NEW] Hàm format tiền tệ VNĐ
+  String _formatCurrency(double amount) {
+    // 10000000 -> 10.000.000
+    return amount.toInt().toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final logoUrl = job.company?.logoUrl;
@@ -13,10 +20,15 @@ class JobCard extends StatelessWidget {
         logoUrl.isNotEmpty &&
         logoUrl.startsWith('http');
 
-    // Format lương
-    final String salaryText = (job.salaryMin != null && job.salaryMax != null)
-        ? "\$${(job.salaryMin!/1000).toInt()}k - \$${(job.salaryMax!/1000).toInt()}k"
-        : "Thỏa thuận";
+    // [UPDATED] Logic hiển thị lương theo định dạng VNĐ
+    String salaryText;
+    if (job.salaryMin != null && job.salaryMax != null) {
+      salaryText = "${_formatCurrency(job.salaryMin!)} - ${_formatCurrency(job.salaryMax!)} VNĐ";
+    } else if (job.salaryMin != null) {
+      salaryText = "Từ ${_formatCurrency(job.salaryMin!)} VNĐ";
+    } else {
+      salaryText = "Thỏa thuận";
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -50,7 +62,6 @@ class JobCard extends StatelessWidget {
               child: Image.network(
                 logoUrl,
                 fit: BoxFit.contain,
-                // [YÊU CẦU 2] Hiển thị logo sẵn có (Icon) nếu lỗi ảnh
                 errorBuilder: (ctx, err, stack) => const Center(
                   child: Icon(Icons.business, color: Colors.grey, size: 28),
                 ),
@@ -94,16 +105,29 @@ class JobCard extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
-                // Tags (Location, Type, Salary)
+                // Tags (Location, Salary, Type)
                 Wrap(
                   spacing: 8,
                   runSpacing: 6,
                   children: [
                     if (job.location != null)
                       _buildTag(Icons.location_on_outlined, job.location!),
-                    _buildTag(Icons.attach_money, salaryText, color: Colors.green.shade700, bgColor: Colors.green.shade50),
+
+                    // [UPDATED] Hiển thị tag lương mới
+                    _buildTag(
+                        Icons.attach_money,
+                        salaryText,
+                        color: Colors.green.shade700,
+                        bgColor: Colors.green.shade50
+                    ),
+
                     if (job.jobType != null)
-                      _buildTag(Icons.access_time, job.jobType!, color: Colors.blue.shade700, bgColor: Colors.blue.shade50),
+                      _buildTag(
+                          Icons.access_time,
+                          job.jobType!,
+                          color: Colors.blue.shade700,
+                          bgColor: Colors.blue.shade50
+                      ),
                   ],
                 )
               ],

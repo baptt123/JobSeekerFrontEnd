@@ -193,11 +193,32 @@ class CompanyDetailScreen extends StatelessWidget {
     );
   }
 
-  // Widget Job Card (Dynamic Theme) - Giữ nguyên logic hiển thị theo theme sáng/tối
+  // --- HELPER FUNCTIONS ---
+  String _formatCurrency(double amount) {
+    return amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  // Widget Job Card (Dynamic Theme)
   Widget _buildJobCard(BuildContext context, JobEntity job, Color cardColor, Color textPrimary,
       Color textSecondary, Color borderColor) {
     final bool isExpired = job.deadline != null && job.deadline!.isBefore(DateTime.now());
     final bool isActive = !isExpired;
+
+    // [UPDATED] Format lương kiểu VNĐ: 10.000.000 VNĐ
+    String salaryText;
+    if (job.salaryMin != null && job.salaryMax != null) {
+      salaryText = "${_formatCurrency(job.salaryMin!)} - ${_formatCurrency(job.salaryMax!)} VNĐ";
+    } else if (job.salaryMin != null) {
+      salaryText = "${_formatCurrency(job.salaryMin!)} VNĐ +";
+    } else {
+      salaryText = "Thỏa thuận";
+    }
+
+    // [UPDATED] Format deadline kiểu dd/MM/yyyy
+    String deadlineText = "Không giới hạn";
+    if (job.deadline != null) {
+      deadlineText = "${job.deadline!.day.toString().padLeft(2, '0')}/${job.deadline!.month.toString().padLeft(2, '0')}/${job.deadline!.year}";
+    }
 
     return GestureDetector(
       onTap: () {
@@ -255,24 +276,26 @@ class CompanyDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            // Hàng hiển thị Lương và Hạn nộp
             Row(
               children: [
                 const Icon(Icons.attach_money, size: 16, color: Colors.green),
                 const SizedBox(width: 4),
-                Text(
-                  job.salaryMin != null
-                      ? "\$${(job.salaryMin! / 1000).toInt()}k+"
-                      : "Thỏa thuận",
-                  style: const TextStyle(
-                      color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                // [UPDATED] Hiển thị lương đã format
+                Expanded(
+                  child: Text(
+                    salaryText,
+                    style: const TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
-                Icon(Icons.access_time, size: 16, color: textSecondary),
+                const SizedBox(width: 8),
+                Icon(Icons.calendar_today, size: 16, color: textSecondary),
                 const SizedBox(width: 4),
+                // [UPDATED] Hiển thị hạn nộp dd/MM/yyyy
                 Text(
-                  job.deadline != null
-                      ? "${job.deadline!.day}/${job.deadline!.month}"
-                      : "N/A",
+                  deadlineText,
                   style: TextStyle(color: textSecondary, fontSize: 12),
                 ),
               ],

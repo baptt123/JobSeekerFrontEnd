@@ -1,7 +1,8 @@
-// lib/dto/create_cv_dto.dart
 import 'education_dto.dart';
 import 'experience_dto.dart';
 import 'skill_dto.dart';
+import 'project_dto.dart'; // Import mới
+import 'achievement_dto.dart'; // Import mới
 
 class CreateCvDto {
   final String fullName;
@@ -14,6 +15,8 @@ class CreateCvDto {
   final List<ExperienceDto> experiences;
   final List<EducationDto> educations;
   final List<SkillDto> skills;
+  final List<ProjectDto> projects; // Field mới
+  final List<AchievementDto> achievements; // Field mới
 
   CreateCvDto({
     required this.fullName,
@@ -26,9 +29,11 @@ class CreateCvDto {
     required this.experiences,
     required this.educations,
     required this.skills,
+    this.projects = const [],
+    this.achievements = const [],
   });
 
-  // --- PHẦN BỔ SUNG: Factory constructor để convert từ JSON sang Object ---
+  // Factory và toJson cập nhật tương ứng
   factory CreateCvDto.fromJson(Map<String, dynamic> json) {
     return CreateCvDto(
       fullName: json['fullName'] ?? '',
@@ -38,23 +43,24 @@ class CreateCvDto {
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
       summary: json['summary'] ?? '',
-      // Xử lý mapping cho các danh sách lồng nhau (Nested Lists)
-      experiences: (json['experiences'] as List<dynamic>?)
-          ?.map((e) => ExperienceDto.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-          [],
-      educations: (json['educations'] as List<dynamic>?)
-          ?.map((e) => EducationDto.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-          [],
-      skills: (json['skills'] as List<dynamic>?)
-          ?.map((e) => SkillDto.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-          [],
+      experiences: (json['experiences'] as List?)
+          ?.map((e) => ExperienceDto.fromJson(e))
+          .toList() ?? [],
+      educations: (json['educations'] as List?)
+          ?.map((e) => EducationDto.fromJson(e))
+          .toList() ?? [],
+      skills: (json['skills'] as List?)
+          ?.map((e) => SkillDto.fromJson(e))
+          .toList() ?? [],
+      projects: (json['projects'] as List?)
+          ?.map((e) => ProjectDto.fromJson(e))
+          .toList() ?? [],
+      achievements: (json['achievements'] as List?)
+          ?.map((e) => AchievementDto.fromJson(e))
+          .toList() ?? [],
     );
   }
 
-  // --- Phần toJson giữ nguyên ---
   Map<String, dynamic> toJson() => {
     'fullName': fullName,
     'avatarUrl': avatarUrl,
@@ -66,5 +72,7 @@ class CreateCvDto {
     'experiences': experiences.map((e) => e.toJson()).toList(),
     'educations': educations.map((e) => e.toJson()).toList(),
     'skills': skills.map((e) => e.toJson()).toList(),
+    'projects': projects.map((e) => e.toJson()).toList(),
+    'achievements': achievements.map((e) => e.toJson()).toList(),
   };
 }

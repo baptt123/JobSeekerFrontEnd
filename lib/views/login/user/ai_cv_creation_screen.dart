@@ -8,7 +8,9 @@ import '../../../services/pdf_template_builder_service.dart';
 import '../../../view_models/user/ai_cv_creator_view_model.dart';
 import '../../../view_models/user/theme_view_model.dart';
 import '../../../dto/education_dto.dart';
-import '../../../utils/app_colors.dart'; // [Quan trọng] Import AppColors
+import '../../../dto/project_dto.dart';
+import '../../../dto/achievement_dto.dart';
+import '../../../utils/app_colors.dart';
 
 class AiCvCreationScreen extends StatelessWidget {
   const AiCvCreationScreen({Key? key}) : super(key: key);
@@ -70,17 +72,23 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
     return Scaffold(
       appBar: AppBar(
         title: const Text("Tạo CV (AI & Thủ công)"),
-        backgroundColor: AppColors.primary, // [Sửa] Dùng màu chủ đạo
+        backgroundColor: AppColors.primary,
         actions: [
-          // IconButton(
-          //   icon: Icon(themeVm.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-          //   onPressed: () => themeVm.toggleTheme(!themeVm.isDarkMode),
-          // ),
           IconButton(
             icon: const Icon(Icons.save),
             tooltip: "Lưu PDF",
             onPressed: () async {
-              final pdfBytes = await _pdfBuilder.buildPdf(vm.cvData, templateId: vm.selectedTemplate);
+              // Xử lý ảnh trước khi build PDF
+              Uint8List? imageBytes;
+              if (vm.localImage != null) {
+                imageBytes = await vm.localImage!.readAsBytes();
+              }
+
+              final pdfBytes = await _pdfBuilder.buildPdf(
+                  vm.cvData,
+                  templateId: vm.selectedTemplate,
+                  avatarBytes: imageBytes // Truyền ảnh vào builder
+              );
               await Printing.layoutPdf(onLayout: (_) => pdfBytes);
             },
           )
@@ -88,9 +96,10 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
       ),
       body: Column(
         children: [
+          // --- AI SECTION ---
           ExpansionTile(
             title: const Text("Tạo nhanh với AI (Gemini)",
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)), // [Sửa]
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -110,8 +119,7 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.auto_awesome),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary), // [Sửa]
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                         onPressed: vm.isLoading ? null : () async {
                           FocusScope.of(context).unfocus();
                           await vm.generateFromPrompt(_promptController.text);
@@ -138,10 +146,11 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
 
           const Divider(height: 1, thickness: 1),
 
+          // --- TABS ---
           TabBar(
             controller: _tabController,
-            labelColor: AppColors.primary, // [Sửa]
-            indicatorColor: AppColors.primary, // [Sửa]
+            labelColor: AppColors.primary,
+            indicatorColor: AppColors.primary,
             unselectedLabelColor: Colors.grey,
             tabs: const [
               Tab(icon: Icon(Icons.edit_note), text: "Chỉnh sửa"),
@@ -159,8 +168,39 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Thông tin cá nhân",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)), // [Sửa]
+                      // --- Phần Ảnh Đại Diện (MỚI) ---
+                      Center(
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.grey[200],
+                              backgroundImage: vm.localImage != null
+                                  ? FileImage(vm.localImage!)
+                                  : (vm.cvData.avatarUrl != null && vm.cvData.avatarUrl!.isNotEmpty)
+                                  ? NetworkImage(vm.cvData.avatarUrl!) as ImageProvider
+                                  : null,
+                              child: (vm.localImage == null && (vm.cvData.avatarUrl == null || vm.cvData.avatarUrl!.isEmpty))
+                                  ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0, right: 0,
+                              child: InkWell(
+                                onTap: vm.pickImage,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      const Text("Thông tin cá nhân", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       const SizedBox(height: 10),
                       _buildTextField("Họ và tên", _nameCtrl, (val) => vm.updateField(fullName: val)),
                       _buildTextField("Vị trí ứng tuyển", _jobCtrl, (val) => vm.updateField(jobTitle: val)),
@@ -170,44 +210,56 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
                       _buildTextField("Tóm tắt bản thân", _summaryCtrl, (val) => vm.updateField(summary: val), maxLines: 3),
 
                       const SizedBox(height: 20),
+
                       // --- Phần Học Vấn ---
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Học vấn",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)), // [Sửa]
-                          IconButton(
-                              onPressed: () => _showAddEducationDialog(context, vm),
-                              icon: const Icon(Icons.add_circle, color: AppColors.primary)) // [Sửa]
-                        ],
-                      ),
-                      if (vm.cvData.educations.isEmpty)
-                        const Text("Chưa có thông tin học vấn.", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+                      _buildSectionHeader(context, "Học vấn", () => _showAddEducationDialog(context, vm)),
                       ...vm.cvData.educations.asMap().entries.map((entry) {
-                        final idx = entry.key;
                         final edu = entry.value;
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: const Icon(Icons.school, color: AppColors.primary), // [Sửa]
-                            title: Text(edu.school, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text("${edu.degree} • ${edu.duration}"),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => vm.removeEducation(idx),
-                            ),
-                          ),
+                        return _buildListItem(
+                          title: edu.school,
+                          subtitle: "${edu.degree} • ${edu.duration}",
+                          onDelete: () => vm.removeEducation(entry.key),
+                          icon: Icons.school,
                         );
                       }).toList(),
 
                       const SizedBox(height: 20),
+
+                      // --- Phần Dự Án (MỚI) ---
+                      _buildSectionHeader(context, "Dự án cá nhân", () => _showAddProjectDialog(context, vm)),
+                      if (vm.cvData.projects.isEmpty) const Text("Chưa có dự án.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+                      ...vm.cvData.projects.asMap().entries.map((entry) {
+                        final prj = entry.value;
+                        return _buildListItem(
+                          title: prj.name,
+                          subtitle: "${prj.role} • ${prj.link}",
+                          onDelete: () => vm.removeProject(entry.key),
+                          icon: Icons.folder,
+                        );
+                      }).toList(),
+
+                      const SizedBox(height: 20),
+
+                      // --- Phần Thành Tích (MỚI) ---
+                      _buildSectionHeader(context, "Thành tích", () => _showAddAchievementDialog(context, vm)),
+                      if (vm.cvData.achievements.isEmpty) const Text("Chưa có thành tích.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+                      ...vm.cvData.achievements.asMap().entries.map((entry) {
+                        final ach = entry.value;
+                        return _buildListItem(
+                          title: ach.name,
+                          subtitle: ach.description,
+                          onDelete: () => vm.removeAchievement(entry.key),
+                          icon: Icons.emoji_events,
+                        );
+                      }).toList(),
+
+                      const SizedBox(height: 20),
+
                       // --- Phần Kỹ Năng ---
-                      const Text("Kỹ năng",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)), // [Sửa]
+                      const Text("Kỹ năng", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       const SizedBox(height: 10),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 8, runSpacing: 8,
                         children: [
                           ...vm.cvData.skills.asMap().entries.map((e) => Chip(
                             label: Text(e.value.name),
@@ -221,7 +273,6 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
                           )
                         ],
                       ),
-
                       const SizedBox(height: 50),
                     ],
                   ),
@@ -237,20 +288,29 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                         children: [
-                          // Template vẫn giữ màu đặc trưng của nó, không đổi theo AppColors
                           _buildTemplateOption(vm, 'modern', "Hiện đại", Colors.blue),
                           _buildTemplateOption(vm, 'classic', "Cổ điển", Colors.black),
-                          _buildTemplateOption(vm, 'professional', "Chuyên nghiệp", AppColors.primary), // [Sửa] Template Pro dùng màu tím
+                          _buildTemplateOption(vm, 'professional', "Chuyên nghiệp", AppColors.primary),
                           _buildTemplateOption(vm, 'creative', "Sáng tạo", Colors.teal),
                         ],
                       ),
                     ),
                     Expanded(
-                      child: PdfPreview(
-                        build: (format) => _pdfBuilder.buildPdf(vm.cvData, templateId: vm.selectedTemplate),
-                        loadingWidget: const Center(child: CircularProgressIndicator()),
-                        useActions: false,
-                        initialPageFormat: PdfPageFormat.a4,
+                      child: FutureBuilder<Uint8List>(
+                        // Load ảnh bytes để render preview
+                          future: vm.localImage != null ? vm.localImage!.readAsBytes() : Future.value(Uint8List(0)),
+                          builder: (context, snapshot) {
+                            return PdfPreview(
+                              build: (format) => _pdfBuilder.buildPdf(
+                                  vm.cvData,
+                                  templateId: vm.selectedTemplate,
+                                  avatarBytes: (snapshot.hasData && snapshot.data!.isNotEmpty) ? snapshot.data : null
+                              ),
+                              loadingWidget: const Center(child: CircularProgressIndicator()),
+                              useActions: false,
+                              initialPageFormat: PdfPageFormat.a4,
+                            );
+                          }
                       ),
                     ),
                   ],
@@ -259,6 +319,30 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // --- Helper Widgets ---
+
+  Widget _buildSectionHeader(BuildContext context, String title, VoidCallback onAdd) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+        IconButton(onPressed: onAdd, icon: const Icon(Icons.add_circle, color: AppColors.primary))
+      ],
+    );
+  }
+
+  Widget _buildListItem({required String title, required String subtitle, required VoidCallback onDelete, required IconData icon}) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: onDelete),
       ),
     );
   }
@@ -276,14 +360,7 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
           border: Border.all(color: color),
         ),
         child: Center(
-          child: Text(
-            name,
-            style: TextStyle(
-              color: isSelected ? Colors.white : color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+            child: Text(name, style: TextStyle(color: isSelected ? Colors.white : color, fontWeight: FontWeight.bold))),
       ),
     );
   }
@@ -304,55 +381,75 @@ class _AiCvCreationBodyState extends State<_AiCvCreationBody> with SingleTickerP
     );
   }
 
+  // --- Dialogs ---
+
   void _showAddSkillDialog(BuildContext context, AiCvCreatorViewModel vm) {
     String newSkill = "";
     showDialog(context: context, builder: (_) => AlertDialog(
       title: const Text("Thêm kỹ năng"),
-      content: TextField(
-          autofocus: true,
-          decoration: const InputDecoration(hintText: "VD: Flutter, Tiếng Anh..."),
-          onChanged: (v) => newSkill = v
-      ),
+      content: TextField(autofocus: true, decoration: const InputDecoration(hintText: "VD: Flutter..."), onChanged: (v) => newSkill = v),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-        TextButton(onPressed: () {
-          if(newSkill.isNotEmpty) vm.addSkill(newSkill);
-          Navigator.pop(context);
-        }, child: const Text("Thêm")),
+        TextButton(onPressed: () { if(newSkill.isNotEmpty) vm.addSkill(newSkill); Navigator.pop(context); }, child: const Text("Thêm")),
       ],
     ));
   }
 
   void _showAddEducationDialog(BuildContext context, AiCvCreatorViewModel vm) {
-    String school = "";
-    String degree = "";
-    String duration = "";
-
+    String school = "", degree = "", duration = "";
     showDialog(context: context, builder: (_) => AlertDialog(
       title: const Text("Thêm Học vấn"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            decoration: const InputDecoration(labelText: "Trường"),
-            onChanged: (v) => school = v,
-          ),
-          TextField(
-            decoration: const InputDecoration(labelText: "Bằng cấp / Ngành"),
-            onChanged: (v) => degree = v,
-          ),
-          TextField(
-            decoration: const InputDecoration(labelText: "Thời gian (VD: 2019 - 2023)"),
-            onChanged: (v) => duration = v,
-          ),
-        ],
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(decoration: const InputDecoration(labelText: "Trường"), onChanged: (v) => school = v),
+        TextField(decoration: const InputDecoration(labelText: "Bằng cấp"), onChanged: (v) => degree = v),
+        TextField(decoration: const InputDecoration(labelText: "Niên khóa"), onChanged: (v) => duration = v),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+        TextButton(onPressed: () {
+          if(school.isNotEmpty) vm.addEducation(EducationDto(school: school, degree: degree, duration: duration));
+          Navigator.pop(context);
+        }, child: const Text("Lưu")),
+      ],
+    ));
+  }
+
+  // Dialog Dự án (MỚI)
+  void _showAddProjectDialog(BuildContext context, AiCvCreatorViewModel vm) {
+    String name = "", role = "", link = "", desc = "";
+    showDialog(context: context, builder: (_) => AlertDialog(
+      title: const Text("Thêm Dự án"),
+      content: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(decoration: const InputDecoration(labelText: "Tên dự án"), onChanged: (v) => name = v),
+          TextField(decoration: const InputDecoration(labelText: "Vai trò"), onChanged: (v) => role = v),
+          TextField(decoration: const InputDecoration(labelText: "Link (Git/Demo)"), onChanged: (v) => link = v),
+          TextField(decoration: const InputDecoration(labelText: "Mô tả ngắn"), maxLines: 2, onChanged: (v) => desc = v),
+        ]),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
         TextButton(onPressed: () {
-          if(school.isNotEmpty) {
-            vm.addEducation(EducationDto(school: school, degree: degree, duration: duration));
-          }
+          if(name.isNotEmpty) vm.addProject(ProjectDto(name: name, role: role, link: link, description: desc));
+          Navigator.pop(context);
+        }, child: const Text("Lưu")),
+      ],
+    ));
+  }
+
+  // Dialog Thành tích (MỚI)
+  void _showAddAchievementDialog(BuildContext context, AiCvCreatorViewModel vm) {
+    String name = "", desc = "";
+    showDialog(context: context, builder: (_) => AlertDialog(
+      title: const Text("Thêm Thành tích"),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(decoration: const InputDecoration(labelText: "Tên giải thưởng/Thành tích"), onChanged: (v) => name = v),
+        TextField(decoration: const InputDecoration(labelText: "Mô tả chi tiết"), maxLines: 2, onChanged: (v) => desc = v),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+        TextButton(onPressed: () {
+          if(name.isNotEmpty) vm.addAchievement(AchievementDto(name: name, description: desc));
           Navigator.pop(context);
         }, child: const Text("Lưu")),
       ],

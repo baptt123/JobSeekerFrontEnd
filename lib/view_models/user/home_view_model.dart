@@ -17,7 +17,6 @@ class HomeViewModel extends ChangeNotifier {
   List<JobEntity> _jobs = [];
   List<JobEntity> get jobs => _jobs;
 
-  // [QUAN TRỌNG] List chứa các job ngẫu nhiên cho banner
   List<JobEntity> _randomJobs = [];
   List<JobEntity> get randomJobs => _randomJobs;
 
@@ -37,6 +36,7 @@ class HomeViewModel extends ChangeNotifier {
   bool _isFiltered = false;
   bool get isFiltered => _isFiltered;
 
+  // Flag kiểm tra xem có đang ở chế độ gợi ý hay không
   bool _isRecommendedMode = false;
   bool get isRecommendedMode => _isRecommendedMode;
 
@@ -47,30 +47,33 @@ class HomeViewModel extends ChangeNotifier {
   bool isJobSaved(int jobId) => _savedJobIds.contains(jobId);
 
   HomeViewModel() {
-    fetchInitialData();
+    // Không gọi fetchInitialData() ở đây để tránh gọi nhiều lần khi UI chưa build xong
   }
 
   Future<void> refreshJobs() async {
     await fetchInitialData();
   }
 
+  // [UPDATED] Hàm khởi tạo dữ liệu chính với logic gợi ý chạy ngầm
   Future<void> fetchInitialData() async {
     _state = HomeState.loading;
     _currentPage = 1;
     _jobs = [];
     _isFiltered = false;
     _currentFilter = FilterJobDto();
-    _currentUser = null;
+    _isRecommendedMode = false;
+    _errorMessage = null;
     notifyListeners();
 
-    // [QUAN TRỌNG] Gọi hàm lấy random job ngay khi khởi tạo
-    await _fetchRandomJobs();
+    // 1. Luôn tải danh sách random jobs cho banner (chạy song song)
+    _fetchRandomJobs();
 
     try {
       final token = await _storage.read(key: 'accessToken');
       final bool isLoggedIn = token != null;
 
       if (isLoggedIn) {
+        // --- LOGIC CHO NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP ---
         try {
           final userProfile = await _userService.getUserProfile();
           final savedJobs = await _jobService.getSavedJobs();
@@ -78,32 +81,39 @@ class HomeViewModel extends ChangeNotifier {
           _currentUser = userProfile;
           _savedJobIds = savedJobs.map((job) => job.jobId).toSet();
 
-          final recommendedJobs = await _jobService.getRecommendedJobs();
+          // [QUAN TRỌNG] Gọi API gợi ý dựa trên lịch sử lưu (Saved Jobs)
+          // Backend sẽ trả về list rỗng nếu user chưa lưu job nào hoặc AI không tìm thấy
+          final recommendedList = await _jobService.getRecommendedJobsByHistory();
 
-          if (recommendedJobs.isNotEmpty) {
-            _jobs = recommendedJobs;
+          if (recommendedList.isNotEmpty) {
+            // Case 1: Có dữ liệu gợi ý -> Hiển thị chế độ gợi ý
+            _jobs = recommendedList;
             _isRecommendedMode = true;
+            _state = HomeState.success;
           } else {
+            // Case 2: Không có gợi ý (hoặc list rỗng) -> Fallback về Load tất cả việc làm
             _isRecommendedMode = false;
             await _loadAllJobs();
           }
-          _state = HomeState.success;
+
         } catch (e) {
+          // Nếu lỗi xác thực user -> Logout mềm và load dữ liệu khách
+          print("Lỗi session user: $e");
           await logout();
           return;
         }
       } else {
+        // --- LOGIC CHO KHÁCH (GUEST) ---
         await _loadGuestData();
       }
     } catch (e) {
       _state = HomeState.error;
-      _errorMessage = "Không thể kết nối đến máy chủ.";
+      _errorMessage = "Không thể kết nối đến máy chủ. Vui lòng thử lại.";
     } finally {
       notifyListeners();
     }
   }
 
-  // Hàm lấy random jobs
   Future<void> _fetchRandomJobs() async {
     try {
       final jobs = await _jobService.getRandomJobs();
@@ -111,7 +121,6 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('Lỗi tải banner random: $e');
-      // Không throw lỗi để app vẫn chạy tiếp
     }
   }
 
@@ -132,11 +141,19 @@ class HomeViewModel extends ChangeNotifier {
     } catch (e) {
       _state = HomeState.error;
       _errorMessage = e.toString();
+      throw e; // Ném tiếp để catch bên ngoài xử lý
     }
   }
 
   Future<void> loadMoreJobs() async {
-    if (_state == HomeState.loadingMore || _state == HomeState.loading || _currentPage >= _totalPages || _isRecommendedMode) return;
+    // Nếu đang ở chế độ Gợi ý hoặc Filter, ta tạm thời không load more
+    // (Vì API gợi ý hiện tại trả về list cố định, chưa phân trang sâu)
+    if (_state == HomeState.loadingMore ||
+        _state == HomeState.loading ||
+        _currentPage >= _totalPages ||
+        _isRecommendedMode ||
+        _isFiltered) return;
+
     _state = HomeState.loadingMore;
     notifyListeners();
     try {
@@ -147,7 +164,7 @@ class HomeViewModel extends ChangeNotifier {
       _totalPages = response.totalPages;
       _state = HomeState.success;
     } catch (e) {
-      _state = HomeState.success;
+      _state = HomeState.success; // Fail silently
     } finally {
       notifyListeners();
     }

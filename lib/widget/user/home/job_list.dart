@@ -7,6 +7,12 @@ import '../../../../views/login/user/job_detail_screen.dart';
 class JobsList extends StatelessWidget {
   const JobsList({Key? key}) : super(key: key);
 
+  // [NEW] Helper format tiền tệ
+  String _formatCurrency(double amount) {
+    return amount.toInt().toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
   @override
   Widget build(BuildContext context) {
     // Sử dụng selector hoặc watch để lắng nghe thay đổi
@@ -24,6 +30,16 @@ class JobsList extends StatelessWidget {
 
         final logoUrl = job.company?.logoUrl;
         final bool isUrlValid = logoUrl != null && logoUrl.startsWith('http');
+
+        // [UPDATED] Logic format lương
+        String salaryText;
+        if (job.salaryMin != null && job.salaryMax != null) {
+          salaryText = "${_formatCurrency(job.salaryMin!)} - ${_formatCurrency(job.salaryMax!)} VNĐ";
+        } else if (job.salaryMin != null) {
+          salaryText = "Từ ${_formatCurrency(job.salaryMin!)} VNĐ";
+        } else {
+          salaryText = "Thỏa thuận";
+        }
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16.0),
@@ -106,6 +122,10 @@ class JobsList extends StatelessWidget {
                             runSpacing: 4,
                             children: [
                               if (job.location != null) _buildTag(Icons.location_on_outlined, job.location!),
+
+                              // [NEW] Hiển thị tag Lương ở đây
+                              _buildTag(Icons.attach_money, salaryText),
+
                               if (job.jobType != null) _buildTag(Icons.access_time, job.jobType!),
                             ],
                           )

@@ -15,20 +15,25 @@ class JobService {
 
   Future<JobEntity> getJobDetail(String title) async {
     final encodedTitle = Uri.encodeComponent(title);
-    final response = await _dio.get('/detail/$encodedTitle'); // Tự động kèm token nếu có
+    final response = await _dio.get('/detail/$encodedTitle');
     if (response.data != null) return JobEntity.fromJson(response.data);
     throw Exception('Data null');
   }
 
-  Future<List<JobEntity>> getRecommendedJobs() async {
+
+  // [NEW] Lấy danh sách gợi ý từ lịch sử (Saved Jobs -> Gemini -> ES)
+  Future<List<JobEntity>> getRecommendedJobsByHistory() async {
     try {
-      final response = await _dio.get('/recommended');
-      if (response.data is List) {
-        return (response.data as List).map((json) => JobEntity.fromJson(json)).toList();
+      final response = await _dio.get('/recommended-by-history');
+      if (response.data != null && response.data['data'] is List) {
+        return (response.data['data'] as List)
+            .map((json) => JobEntity.fromJson(json))
+            .toList();
       }
       return [];
     } catch (e) {
-      return [];
+      print("Lỗi lấy gợi ý việc làm (History): $e");
+      return []; // Trả về rỗng để fallback về list thường
     }
   }
 
@@ -60,7 +65,7 @@ class JobService {
     final response = await _dio.get('/suggest', queryParameters: {'q': query});
     return List<String>.from(response.data);
   }
-  // [THÊM MỚI] Lấy thông tin công ty và list jobs
+
   Future<Map<String, dynamic>> getCompanyWithJobs(int companyId) async {
     try {
       final response = await _dio.get('/company/$companyId/jobs');
@@ -69,7 +74,7 @@ class JobService {
       throw Exception('Lỗi lấy thông tin công ty: $e');
     }
   }
-  // [THÊM MỚI] Lấy danh sách random jobs cho banner
+
   Future<List<JobEntity>> getRandomJobs() async {
     try {
       final response = await _dio.get('/random');
@@ -80,7 +85,7 @@ class JobService {
       return [];
     } catch (e) {
       print('Lỗi khi lấy các job ngẫu nhiên: $e');
-      return []; // Trả về list rỗng nếu lỗi
+      return [];
     }
   }
 }

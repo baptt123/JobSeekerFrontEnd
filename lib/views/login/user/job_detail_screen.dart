@@ -58,7 +58,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
-  // [UPDATED] Dialog xác nhận hủy ứng tuyển sử dụng ViewModel để cập nhật State
+  // Dialog xác nhận hủy ứng tuyển sử dụng ViewModel để cập nhật State
   void _showCancelConfirmation(BuildContext context, JobDetailViewModel vm) {
     showDialog(
       context: context,
@@ -145,7 +145,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
 
   Widget _buildHeaderContent(JobEntity job) {
     String? logoUrl = job.company?.logoUrl;
+    // Kiểm tra URL hợp lệ cơ bản
     bool isValidUrl = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
+
     return Container(
       decoration: const BoxDecoration(gradient: LinearGradient(colors: [kPrimaryColor, Color(0xFF5F27CD)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
       child: SafeArea(
@@ -159,7 +161,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                 child: Container(
                   width: 80, height: 80, padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 10)]),
-                  child: isValidUrl ? Image.network(logoUrl, fit: BoxFit.contain) : const Icon(Icons.business, size: 40, color: Colors.grey),
+                  child: isValidUrl
+                      ? Image.network(
+                    logoUrl,
+                    fit: BoxFit.contain,
+                    // [FIX] Thêm errorBuilder để bắt lỗi 404 hoặc lỗi mạng
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.business, size: 40, color: Colors.grey);
+                    },
+                    // [OPTIONAL] Thêm loading builder cho mượt
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    },
+                  )
+                      : const Icon(Icons.business, size: 40, color: Colors.grey),
                 ),
               ),
               const SizedBox(height: 12),
@@ -172,10 +188,32 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
+  // --- HELPER FORMAT FUNCTIONS ---
+  String _formatCurrency(double amount) {
+    // Format số: 10000000 -> 10.000.000
+    return amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return "Không giới hạn";
+    return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+  }
+
   Widget _buildJobInfo(BuildContext context, JobDetailViewModel vm, JobEntity job) {
     List<String> displayTags = job.skills.isNotEmpty ? job.skills : (job.requirements?.split(', ') ?? []);
-    String _formatSalary(double amount) => "\$${(amount/1000).toInt()}k";
-    final String salaryText = (job.salaryMin != null && job.salaryMax != null) ? "${_formatSalary(job.salaryMin!)} - ${_formatSalary(job.salaryMax!)}" : (job.salaryMin != null ? "${_formatSalary(job.salaryMin!)} +" : "Thỏa thuận");
+
+    // Format lương theo kiểu VNĐ
+    String salaryText;
+    if (job.salaryMin != null && job.salaryMax != null) {
+      salaryText = "${_formatCurrency(job.salaryMin!)} - ${_formatCurrency(job.salaryMax!)} VNĐ";
+    } else if (job.salaryMin != null) {
+      salaryText = "Từ ${_formatCurrency(job.salaryMin!)} VNĐ";
+    } else {
+      salaryText = "Thỏa thuận";
+    }
+
+    // Lấy hạn nộp thực tế
+    String deadlineText = _formatDate(job.deadline);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -194,7 +232,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             children: [
               Expanded(child: _buildDetailBox(icon: Icons.location_on, text: job.location ?? "Remote", color: Colors.orange)),
               const SizedBox(width: 12),
-              Expanded(child: _buildDetailBox(icon: Icons.calendar_today, text: "Hạn nộp", color: Colors.redAccent)),
+              Expanded(child: _buildDetailBox(icon: Icons.calendar_today, text: deadlineText, color: Colors.redAccent, label: "Hạn nộp")),
             ],
           ),
           const SizedBox(height: 24),
@@ -218,11 +256,19 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildDetailBox({required IconData icon, required String text, required Color color}) {
+  Widget _buildDetailBox({required IconData icon, required String text, required Color color, String? label}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-      child: Column(children: [Icon(icon, color: color, size: 24), const SizedBox(height: 4), Text(text, textAlign: TextAlign.center, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)]),
+      child: Column(children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
+        if (label != null) ...[
+          Text(label, style: TextStyle(color: color.withOpacity(0.8), fontSize: 11)),
+          const SizedBox(height: 2),
+        ],
+        Text(text, textAlign: TextAlign.center, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)
+      ]),
     );
   }
 
@@ -255,7 +301,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 20, color: kPrimaryColor), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)), const SizedBox(height: 2), Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))]))]);
   }
 
-  // [UPDATED] Xử lý hiển thị nút dựa trên trạng thái trong ViewModel
   Widget _buildBottomAction(BuildContext context, JobDetailViewModel vm, JobEntity job) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -266,7 +311,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
             const SizedBox(width: 16),
             Expanded(
               child: vm.isApplied
-              // Nếu Đã ứng tuyển -> Hiển thị nút Hủy (Đỏ) và gọi dialog xác nhận
                   ? ElevatedButton(
                   onPressed: () => _showCancelConfirmation(context, vm),
                   style: ElevatedButton.styleFrom(
@@ -276,7 +320,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                   ),
                   child: const Text("Hủy ứng tuyển", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
               )
-              // Nếu Chưa ứng tuyển -> Hiển thị nút Ứng tuyển ngay (Tím)
                   : ElevatedButton(
                   onPressed: () => _showApplyBottomSheet(context, vm),
                   style: ElevatedButton.styleFrom(

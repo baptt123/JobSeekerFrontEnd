@@ -79,7 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      // BỎ backgroundColor cứng, tự lấy từ Theme (Light/Dark)
       drawer: _buildDrawer(context, currentUser),
       body: SafeArea(
         child: Stack(
@@ -87,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
             RefreshIndicator(
               onRefresh: () => homeVM.refreshJobs(),
               color: kPrimaryColor,
-              backgroundColor: Theme.of(context).cardTheme.color, // Màu nền loading quay
+              backgroundColor: Theme.of(context).cardTheme.color,
               edgeOffset: 0,
               child: _buildBody(context, homeVM, currentUser),
             ),
@@ -109,13 +108,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const Icon(Icons.wifi_off, size: 48, color: Colors.redAccent),
             const SizedBox(height: 16),
             Text(vm.errorMessage ?? "Lỗi tải dữ liệu", style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => vm.fetchInitialData(),
-              child: const Text("Thử lại"),
+              child: const Text("Tải lại trang"),
             )
           ],
         ),
@@ -152,22 +151,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  vm.isRecommendedMode ? 'Việc làm phù hợp ✨' : 'Việc làm mới nhất',
-                  // Dùng Theme để text tự đổi màu trắng/đen
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                if (vm.isRecommendedMode)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      "Gợi ý dựa trên hồ sơ của bạn",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          vm.isRecommendedMode ? 'Gợi ý cho bạn ' : 'Việc làm mới nhất',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        if (vm.isRecommendedMode)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: Colors.purple.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.purple.withOpacity(0.3))
+                            ),
+                            // child: const Text("AI Picked", style: TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
+                          )
+                      ],
                     ),
-                  ),
+                    if (vm.isRecommendedMode)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          "Dựa trên các công việc bạn đã lưu",
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -198,8 +217,14 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-          if (vm.state == HomeState.loadingMore)
+          if (vm.state == HomeState.loadingMore && !vm.isRecommendedMode)
             const Padding(padding: EdgeInsets.all(20.0), child: Center(child: CircularProgressIndicator(color: kPrimaryColor))),
+
+          if (vm.isRecommendedMode && vm.jobs.isNotEmpty)
+            const Padding(
+                padding: EdgeInsets.all(20.0),
+                child: Center(child: Text("Hết danh sách gợi ý", style: TextStyle(color: Colors.grey, fontSize: 12)))
+            ),
 
           const SizedBox(height: 80),
         ],
@@ -335,21 +360,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final logoUrl = job.company?.logoUrl;
     final bool hasValidLogo = logoUrl != null && logoUrl.isNotEmpty && logoUrl.startsWith('http');
 
-    String _formatSalary(double amount) => "\$${(amount/1000).toInt()}k";
-    final String salaryText = (job.salaryMin != null && job.salaryMax != null)
-        ? "${_formatSalary(job.salaryMin!)} - ${_formatSalary(job.salaryMax!)}"
-        : (job.salaryMin != null ? "${_formatSalary(job.salaryMin!)} +" : "Thỏa thuận");
+    // [UPDATED] Hàm format tiền tệ VNĐ (ví dụ: 10.000.000)
+    String _formatCurrency(double amount) {
+      return amount.toInt().toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    }
+
+    // [UPDATED] Logic hiển thị chuỗi lương
+    String salaryText;
+    if (job.salaryMin != null && job.salaryMax != null) {
+      salaryText = "${_formatCurrency(job.salaryMin!)} - ${_formatCurrency(job.salaryMax!)} VNĐ";
+    } else if (job.salaryMin != null) {
+      salaryText = "Từ ${_formatCurrency(job.salaryMin!)} VNĐ";
+    } else {
+      salaryText = "Thỏa thuận";
+    }
 
     final bool isSaved = vm.isJobSaved(job.jobId);
 
-    // Lấy màu từ Theme (Dark/Light)
     final cardColor = Theme.of(context).cardTheme.color;
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: cardColor, // Tự động đổi màu nền
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 4))],
       ),
@@ -366,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   width: 56, height: 56,
                   decoration: BoxDecoration(
-                      color: Colors.white, // Logo công ty nên để nền trắng để dễ nhìn
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade200)
                   ),
@@ -395,7 +430,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         spacing: 8, runSpacing: 6,
                         children: [
                           if (job.location != null) _buildTag(context, Icons.location_on_outlined, job.location!),
+
+                          // [UPDATED] Hiển thị tag lương với định dạng mới
                           _buildTag(context, Icons.attach_money, salaryText, color: Colors.green.shade700, bgColor: Colors.green.withOpacity(0.1)),
+
                           if (job.jobType != null) _buildTag(context, Icons.work_outline, job.jobType!, color: Colors.blue.shade700, bgColor: Colors.blue.withOpacity(0.1)),
                         ],
                       )
@@ -420,7 +458,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTag(BuildContext context, IconData icon, String text, {Color? color, Color? bgColor}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Điều chỉnh màu nền tag trong Dark Mode cho dễ đọc
     final effectiveBgColor = bgColor ?? (isDark ? Colors.grey[800] : Colors.grey[100]);
     final effectiveTextColor = color ?? (isDark ? Colors.grey[300] : Colors.grey[700]);
 
@@ -453,7 +490,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool hasValidAvatar = avatarUrl != null && avatarUrl.isNotEmpty && avatarUrl.startsWith('http');
 
     return Drawer(
-      // Drawer background tự động lấy từ canvasColor trong Theme
       child: Column(
         children: [
           UserAccountsDrawerHeader(
@@ -466,11 +502,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: (!isUserLoggedIn || !hasValidAvatar) ? const Icon(Icons.person, size: 40, color: kPrimaryColor) : null,
             ),
           ),
-          // ListTile(
-          //   leading: const Icon(Icons.document_scanner, color: Colors.blueAccent),
-          //   title: const Text("Quét CV (Scan PDF)"),
-          //   onTap: () { Navigator.pop(context); isUserLoggedIn ? Navigator.pushNamed(context, '/scan_pdf') : _showLoginRequired(context); },
-          // ),
           ListTile(
             leading: const Icon(Icons.auto_awesome, color: Colors.deepPurpleAccent),
             title: const Text("Tạo CV với Gemini AI"),
@@ -515,7 +546,6 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 50,
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
-        // Đổi màu nền thanh tìm kiếm theo Theme
           color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(15.0),
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))]
