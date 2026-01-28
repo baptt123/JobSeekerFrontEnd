@@ -123,13 +123,13 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  // 4. Đăng xuất
-  Future<void> logout(BuildContext context) async {
-    await _storage.deleteAll();
-    _user = null;
-    _setState(ProfileState.unauthorized);
-    if(context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-    }
-  }
+  // // 4. Đăng xuất
+  // Future<void> logout(BuildContext context) async {
+  //   await _storage.deleteAll();
+  //   _user = null;
+  //   _setState(ProfileState.unauthorized);
+  //   if(context.mounted) {
+  //     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  //   }
+  // }
 }

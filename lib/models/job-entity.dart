@@ -38,7 +38,7 @@ class JobEntity {
   final CompanyEntity? company;
   final DateTime? deadline;
   final List<String> skills;
-
+  final DateTime? createdAt;
   // [UPDATE] Thêm trường recruiter
   final RecruiterInfo? recruiter;
 
@@ -57,6 +57,7 @@ class JobEntity {
     this.skills = const [],
     this.deadline,
     this.recruiter, // [UPDATE] Constructor
+    this.createdAt,
   });
 
   factory JobEntity.fromJson(Map<String, dynamic> json) {
@@ -85,6 +86,7 @@ class JobEntity {
       deadline: json['deadline'] != null
           ? DateTime.parse(json['deadline'])
           : null,
+      createdAt: json['created_at']!=null ? DateTime.parse(json['created_at']) : null,
       company: json['company'] != null && json['company'] is Map
           ? CompanyEntity.fromJson(json['company'] as Map<String, dynamic>)
           : null,

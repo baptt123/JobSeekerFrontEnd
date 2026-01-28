@@ -176,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildMenuSection(context, "Cài đặt", [
                             _buildMenuItem(context, Icons.settings_outlined, "Cài đặt chung", () => Navigator.pushNamed(context, '/settings')),
                             _buildMenuItem(context, Icons.help_outline, "Trợ giúp & Hỗ trợ", () {}),
-                            _buildMenuItem(context, Icons.logout, "Đăng xuất", () => vm.logout(context), isDestructive: true),
+                            // _buildMenuItem(context, Icons.logout, "Đăng xuất", () => vm.logout(context), isDestructive: true),
                           ]),
                         ],
                       ),

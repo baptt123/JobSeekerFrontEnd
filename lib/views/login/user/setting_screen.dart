@@ -36,11 +36,11 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () => Navigator.pushNamed(context, '/change_password'),
           ),
-          ListTile(
-            title: const Text("Đăng xuất"),
-            leading: const Icon(Icons.logout, color: Colors.red),
-            onTap: () => context.read<LoginViewModel>().logout(context),
-          ),
+          // ListTile(
+          //   title: const Text("Đăng xuất"),
+          //   leading: const Icon(Icons.logout, color: Colors.red),
+          //   onTap: () => context.read<LoginViewModel>().logout(context),
+          // ),
         ],
       ),
     );

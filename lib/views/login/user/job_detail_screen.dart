@@ -115,7 +115,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
                     backgroundColor: kPrimaryColor,
                     leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
                     actions: [
-                      IconButton(icon: Icon(vm.isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.white), onPressed: () => vm.toggleSaveJob(context)),
+                      // IconButton(icon: Icon(vm.isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.white), onPressed: () => vm.toggleSaveJob(context)),
                       // IconButton(icon: const Icon(Icons.share, color: Colors.white), onPressed: () {}),
                     ],
                     flexibleSpace: FlexibleSpaceBar(background: _buildHeaderContent(job)),
@@ -213,7 +213,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> with SingleTickerProv
     }
 
     // Lấy hạn nộp thực tế
-    String deadlineText = _formatDate(job.deadline);
+    String deadlineText =
+    _formatDate(job.createdAt!.add(const Duration(days: 120)));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),

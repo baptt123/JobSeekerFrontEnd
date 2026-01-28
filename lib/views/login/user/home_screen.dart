@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:job_seeker_frontend/view_models/user/login_view_model.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
@@ -527,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 final confirm = await showDialog(context: context, builder: (ctx) => AlertDialog(title: const Text("Đăng xuất"), content: const Text("Bạn có muốn đăng xuất?"), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Hủy")), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Đồng ý", style: TextStyle(color: Colors.red)))]));
-                if (confirm == true) await context.read<ProfileViewModel>().logout(context);
+                if (confirm == true) await context.read<LoginViewModel>().logout(context);
               },
             )
           else
