@@ -199,26 +199,26 @@ class JobDetailViewModel extends ChangeNotifier {
     }
   }
 
-  // 6. Toggle Save
-  Future<void> toggleSaveJob(BuildContext context) async {
-    if (_isSaving || _job == null) return;
-    _isSaving = true;
-    final originalState = _isSaved;
-    _isSaved = !_isSaved; // Optimistic update
-    notifyListeners();
-
-    try {
-      if (_isSaved) {
-        await _jobService.saveJob(_job!.jobId);
-      } else {
-        await _jobService.unsaveJob(_job!.jobId);
-      }
-    } catch (e) {
-      _isSaved = originalState;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lỗi thao tác"), backgroundColor: Colors.red));
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
-  }
+  // // 6. Toggle Save
+  // Future<void> toggleSaveJob(BuildContext context) async {
+  //   if (_isSaving || _job == null) return;
+  //   _isSaving = true;
+  //   final originalState = _isSaved;
+  //   _isSaved = !_isSaved; // Optimistic update
+  //   notifyListeners();
+  //
+  //   try {
+  //     if (_isSaved) {
+  //       await _jobService.saveJob(_job!.jobId);
+  //     } else {
+  //       await _jobService.unsaveJob(_job!.jobId);
+  //     }
+  //   } catch (e) {
+  //     _isSaved = originalState;
+  //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lỗi thao tác"), backgroundColor: Colors.red));
+  //   } finally {
+  //     _isSaving = false;
+  //     notifyListeners();
+  //   }
+  // }
 }

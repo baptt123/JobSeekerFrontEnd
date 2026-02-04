@@ -14,7 +14,6 @@ import 'package:job_seeker_frontend/views/login/user/forgot_password_screen.dart
 import 'package:job_seeker_frontend/views/login/user/change_password_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/setting_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/search_screen.dart';
-import 'package:job_seeker_frontend/views/login/user/scan_pdf_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/gemini_cv_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/notification_screen.dart';
@@ -150,7 +149,7 @@ class MyApp extends StatelessWidget {
             '/change_password': (_) => const ChangePasswordScreen(),
             '/forgot_password': (_) => const ForgotPasswordScreen(),
             '/search': (_) => const SearchScreen(),
-            '/scan_pdf': (_) => ScanPdfScreen(),
+            // '/scan_pdf': (_) => ScanPdfScreen(),
             '/cv_generator': (_) => GeminiCvScreen(),
             '/save_job': (_) => const SavedJobsScreen(),
             '/notification': (_) => const NotificationScreen(),

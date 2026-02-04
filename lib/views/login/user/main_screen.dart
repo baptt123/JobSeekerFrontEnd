@@ -13,7 +13,6 @@ import 'package:job_seeker_frontend/views/login/user/home_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/profile_screen.dart';
 import 'package:job_seeker_frontend/views/login/user/save_job_screen.dart';
 import 'package:job_seeker_frontend/widget/user/home/home_bottom_nav.dart';
-import 'cv_template_selection_screen.dart';
 import 'help_support_screen.dart';
 
 class MainScreen extends StatefulWidget {

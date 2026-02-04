@@ -62,27 +62,4 @@ class NotificationViewModel extends ChangeNotifier {
     }
   }
 
-  // Đánh dấu đã đọc
-  Future<void> markAsRead(int notificationId) async {
-    // Cập nhật local trước để UI mượt mà (Optimistic Update)
-    final index = _notifications.indexWhere((n) => n.notificationId == notificationId);
-    if (index != -1 && !_notifications[index].isRead) {
-      _unreadCount = (_unreadCount > 0) ? _unreadCount - 1 : 0;
-      notifyListeners();
-
-      // Gọi API thực tế
-      bool success = await _notificationService.markAsRead(notificationId);
-      if (success) {
-        // Tải lại để cập nhật trạng thái chính xác từ Backend
-        await fetchNotifications();
-      }
-    }
-  }
-
-  Future<void> markAllAsRead() async {
-    _unreadCount = 0;
-    notifyListeners();
-    await _notificationService.markAllAsRead();
-    await fetchNotifications();
-  }
 }

@@ -35,13 +35,5 @@ class JobApplicationService {
     }
   }
 
-  Future<bool> checkApplicationStatus(int jobId) async {
-    try {
-      await _dio.get('/status', queryParameters: {'jobId': jobId});
-      return true;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404) return false;
-      return false;
-    }
-  }
+
 }

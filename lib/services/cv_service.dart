@@ -7,27 +7,27 @@ import '../utils/dio_client.dart';
 class CVService {
   final Dio _dio = DioClient.getDio(baseUrl: '${ConstantAPI.baseUrl}');
 
-  // 1. Upload CV (Giữ nguyên)
-  Future<dynamic> uploadCV(File file) async {
-    String fileName = file.path.split('/').last;
-    FormData formData = FormData.fromMap({
-      "file": await MultipartFile.fromFile(
-        file.path,
-        filename: fileName,
-        contentType: MediaType('application', 'pdf'),
-      ),
-    });
-
-    try {
-      Response response = await _dio.post(
-        '/cv/upload-extract',
-        data: formData,
-      );
-      return response.data;
-    } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Lỗi tải lên CV');
-    }
-  }
+  // // 1. Upload CV (Giữ nguyên)
+  // Future<dynamic> uploadCV(File file) async {
+  //   String fileName = file.path.split('/').last;
+  //   FormData formData = FormData.fromMap({
+  //     "file": await MultipartFile.fromFile(
+  //       file.path,
+  //       filename: fileName,
+  //       contentType: MediaType('application', 'pdf'),
+  //     ),
+  //   });
+  //
+  //   try {
+  //     Response response = await _dio.post(
+  //       '/cv/upload-extract',
+  //       data: formData,
+  //     );
+  //     return response.data;
+  //   } on DioException catch (e) {
+  //     throw Exception(e.response?.data['message'] ?? 'Lỗi tải lên CV');
+  //   }
+  // }
 
   // 2. Generate AI (UPDATED: Nhận Bytes PDF)
   Future<List<int>> generateCVAI(String prompt) async {
@@ -51,18 +51,18 @@ class CVService {
   }
 
   // 3. Generate Template (Giữ nguyên)
-  Future<List<int>> generateCVTemplate(int templateId, Map<String, dynamic> data) async {
-    try {
-      Response response = await _dio.post(
-        '/cv/generate-template',
-        data: {"templateId": templateId, "data": data},
-        options: Options(responseType: ResponseType.bytes),
-      );
-      return response.data;
-    } on DioException catch (e) {
-      throw Exception('Lỗi tạo CV từ Template: ${e.message}');
-    }
-  }
+  // Future<List<int>> generateCVTemplate(int templateId, Map<String, dynamic> data) async {
+  //   try {
+  //     Response response = await _dio.post(
+  //       '/cv/generate-template',
+  //       data: {"templateId": templateId, "data": data},
+  //       options: Options(responseType: ResponseType.bytes),
+  //     );
+  //     return response.data;
+  //   } on DioException catch (e) {
+  //     throw Exception('Lỗi tạo CV từ Template: ${e.message}');
+  //   }
+  // }
 
   // 4. Quản lý CV (Giữ nguyên)
   Future<List<dynamic>> getMyCVs() async {

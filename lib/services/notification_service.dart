@@ -23,23 +23,5 @@ class NotificationService {
     }
   }
 
-  // [NEW] Đánh dấu 1 tin đã đọc
-  Future<bool> markAsRead(int notificationId) async {
-    try {
-      await _dio.patch('/notifications/$notificationId/read');
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
 
-  // [NEW] Đánh dấu tất cả đã đọc
-  Future<bool> markAllAsRead() async {
-    try {
-      await _dio.patch('/notifications/read-all');
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
 }

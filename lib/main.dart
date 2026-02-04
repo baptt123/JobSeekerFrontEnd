@@ -56,7 +56,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ForgotPasswordViewModel()),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
         ChangeNotifierProvider(create: (_) => SearchViewModel()),
-        ChangeNotifierProvider(create: (_) => ScanPdfViewModel()),
+        // ChangeNotifierProvider(create: (_) => ScanPdfViewModel()),
         ChangeNotifierProvider(create: (_) => CvGenerationViewModel()),
         ChangeNotifierProvider(create: (_) => JobDetailViewModel()),
         ChangeNotifierProvider(create: (_) => SavedJobsViewModel()),
